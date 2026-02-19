@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Titan Tracker v39.5 - 22.5° Offset & Fixed Layers</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #ui-top { background: #111; border-bottom: 1px solid #333; padding: 5px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+        #viewport-container { position: relative; flex-grow: 1; background: #050505; overflow: hidden; touch-action: none; }
+        canvas { display: block; width: 100%; height: 100%; }
+        .stat-box { border: 1px solid #333; padding: 4px; background: #000; text-align: center; font-weight: bold; font-size: 11px; }
+        .controls { padding: 8px; background: #111; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; border-top: 1px solid #333; }
+        button, select, input { padding: 6px; background: #000; color: #0f0; border: 1px solid #0f0; font-family: inherit; font-size: 11px; cursor: pointer; }
+        .btn-exec { grid-column: span 2; background: #300; color: #fff; border-color: #f00; font-weight: bold; }
+        #log { height: 45px; background: #000; padding: 5px; font-size: 10px; color: #aaa; border-top: 1px solid #222; overflow-y: scroll; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div id="ui-top">
+        <div class="stat-box" style="color: #0f0;">GREEN ZONE: ±1.75</div>
+        <div class="stat-box" style="color: #0af;">WATER ZONE: X > 3</div>
+        <div class="stat-box">DAY <span id="currentDay">1</span></div>
+    </div>
+
+    <div id="viewport-container">
+        <canvas id="mainCanvas"></canvas>
+    </div>
+
+    <div id="log">> v39.5: TAILS OFFSET (+22.5°) ACTIVE. RENDER LAYERING LOCKED.</div>
+
+    <div class="controls">
+        <button onclick="undo()">UNDO</button>
+        <button onclick="centerMap()">CENTER</button>
+        <select id="mShift"><option value="0">H (0°)</option><option value="22.5">T (+22.5°)</option></select>
+        <select id="tName"></select>
+        <input type="number" id="mRoll" placeholder="d100">
+        <input type="number" id="mDir" placeholder="Dir(1-8)">
+        <button class="btn-exec" onclick="applyMove()">EXECUTE TURN</button>
+        <button onclick="advanceDay()" style="grid-column: span 4; background: #002; color: #0af;">NEXT DAY</button>
+    </div>
+
+<script>
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('viewport-container');
+
+    const WRAP_X = 314, POLE_Y = 157, WALL_Y = 103.6, CAPITAL_Y = 83.6, COAST_X = 3, G_LIMIT = 1.75;
+    
+    const features = [
+        { name: "NORTH WALL", type: "line", y: WALL_Y, color: "#f00" },
+        { name: "CAPITAL", x: 0, y: CAPITAL_Y, color: "#fff" },
+        { name: "COASTAL CITY", x: COAST_X, y: CAPITAL_Y, color: "#0af" },
+        { name: "THE TREE", x: -7.78, y: 91.38, color: "#0f0" },
+        { name: "RELIGIOUS", x: -1.41, y: 82.19, color: "#f0f" },
+        { name: "EQUATOR", type: "line", y: 0, color: "#333" }
+    ];
+
+    let state = {
+        titans: {
+            Lava: {x:-10, y:70, c:'red', path:[{x:-10, y:70}]},
+            Air: {x:3, y:95, c:'white', path:[{x:3, y:95}]},
+            Water: {x:25, y:83.6, c:'#1e90ff', path:[{x:25, y:83.6}]},
+            Earth: {x:-20, y:60, c:'#8B4513', path:[{x:-20, y:60}]},
+            Sand: {x:0, y:20, c:'yellow', path:[{x:0, y:20}]},
+            Ice: {x:10, y:95, c:'cyan', path:[{x:10, y:95}]}
+        },
+        movedToday: [], day: 1, history: []
+    };
+
+    let zoom = 8, offsetX = 0, offsetY = 0, isDragging = false, lastX, lastY;
+
+    function draw() {
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+        const cx = canvas.width/2 + offsetX, cy = canvas.height/2 + offsetY;
+        ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // --- LAYER 1: GRID & LABELS ---
+        ctx.strokeStyle = "#1a1a1a"; ctx.lineWidth = 1;
+        ctx.font = "9px Arial"; ctx.fillStyle = "#444";
+        for(let x = -WRAP_X; x <= WRAP_X; x += 10) {
+            ctx.beginPath(); ctx.moveTo(cx + x*zoom, cy - POLE_Y*zoom); ctx.lineTo(cx + x*zoom, cy + POLE_Y*zoom); ctx.stroke();
+            if(x % 50 === 0) ctx.fillText(x, cx + x*zoom + 2, cy + POLE_Y*zoom + 12);
+        }
+        for(let y = -POLE_Y; y <= POLE_Y; y += 10) {
+            ctx.beginPath(); ctx.moveTo(cx - WRAP_X*zoom, cy - y*zoom); ctx.lineTo(cx + WRAP_X*zoom, cy - y*zoom); ctx.stroke();
+            if(y % 50 === 0) ctx.fillText(y, cx - WRAP_X*zoom - 25, cy - y*zoom + 4);
+        }
+
+        // --- LAYER 2: ZONE OVERLAYS ---
+        ctx.fillStyle = "rgba(0, 150, 255, 0.15)";
+        ctx.fillRect(cx + COAST_X*zoom, cy - POLE_Y*zoom, (WRAP_X - COAST_X)*zoom, (POLE_Y * 2)*zoom);
+        ctx.fillStyle = "rgba(0, 255, 0, 0.15)";
+        ctx.fillRect(cx - G_LIMIT*zoom, cy - WALL_Y*zoom, (G_LIMIT*2)*zoom, (WALL_Y - CAPITAL_Y)*zoom);
+
+        // --- LAYER 3: WORLD BORDER & LANDMARKS ---
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+        ctx.strokeRect(cx - WRAP_X*zoom, cy - POLE_Y*zoom, (WRAP_X*2)*zoom, (POLE_Y*2)*zoom);
+
+        features.forEach(f => {
+            ctx.fillStyle = f.color;
+            if(f.type === "line") {
+                ctx.strokeStyle = f.color; ctx.beginPath(); ctx.moveTo(cx-WRAP_X*zoom, cy-f.y*zoom); ctx.lineTo(cx+WRAP_X*zoom, cy-f.y*zoom); ctx.stroke();
+            } else {
+                ctx.beginPath(); ctx.arc(cx+f.x*zoom, cy-f.y*zoom, 4, 0, 7); ctx.fill();
+                ctx.fillStyle = "#fff"; ctx.fillText(`${f.name}`, cx+f.x*zoom+8, cy-f.y*zoom-4);
+            }
+        });
+
+        // --- LAYER 4: TITANS (Always on top) ---
+        for(let k in state.titans) {
+            let t = state.titans[k];
+            ctx.strokeStyle = t.c; ctx.lineWidth = 2;
+            ctx.beginPath();
+            t.path.slice(-30).forEach((p, i) => { if(i===0) ctx.moveTo(cx+p.x*zoom, cy-p.y*zoom); else ctx.lineTo(cx+p.x*zoom, cy-p.y*zoom); });
+            ctx.stroke();
+            ctx.fillStyle = t.c; ctx.beginPath(); ctx.arc(cx+t.x*zoom, cy-t.y*zoom, 6, 0, 7); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Courier";
+            ctx.fillText(`${k} (${t.x.toFixed(1)}, ${t.y.toFixed(1)})`, cx+t.x*zoom+10, cy-t.y*zoom+3);
+        }
+    }
+
+    function applyMove() {
+        const name = document.getElementById('tName').value;
+        if (!state.titans[name]) return;
+        state.history.push(JSON.parse(JSON.stringify({t:state.titans, m:state.movedToday, d:state.day})));
+        
+        const t = state.titans[name];
+        const roll = parseInt(document.getElementById('mRoll').value) || 0;
+        const d8 = parseInt(document.getElementById('mDir').value) || 1;
+        const offset = parseFloat(document.getElementById('mShift').value) || 0;
+        
+        const dist = (roll <= 10) ? 0 : (roll <= 25) ? 5 : (roll <= 50) ? 10 : (roll <= 75) ? 20 : (roll <= 90) ? 30 : 40;
+        
+        // Calculate Base Angle (1=North=90deg, decreases CW)
+        // Adjusting so 1=90, 2=45, 3=0, 4=-45, 5=-90, 6=-135, 7=-180, 8=135
+        let baseAngle = 90 - ((d8 - 1) * 45);
+        let finalAngle = (baseAngle - offset) * (Math.PI / 180);
+
+        let dx = Math.cos(finalAngle);
+        let dy = Math.sin(finalAngle);
+
+        let nx = t.x + (dx * dist), ny = t.y + (dy * dist);
+
+        // DOCTRINE COLLISIONS
+        if (ny > WALL_Y) ny = (name === "Earth") ? WALL_Y : WALL_Y - (ny - WALL_Y);
+        if (ny < -POLE_Y) ny = -POLE_Y; 
+        if (nx > WRAP_X) nx = -WRAP_X + (nx - WRAP_X); 
+        if (nx < -WRAP_X) nx = WRAP_X + (nx + WRAP_X);
+
+        if (name !== "Air" && ny >= CAPITAL_Y && ny <= WALL_Y) {
+            if (nx > -G_LIMIT && nx < G_LIMIT) {
+                nx = (nx > 0) ? G_LIMIT : -G_LIMIT;
+            }
+        }
+        if (name === "Water" && nx < COAST_X) nx = COAST_X;
+        if (["Lava", "Earth", "Sand"].includes(name) && nx > 8.0) nx = 8.0;
+
+        t.x = nx; t.y = ny; t.path.push({x:nx, y:ny});
+        state.movedToday.push(name); updateDropdown(); draw();
+    }
+
+    function centerMap() { offsetX = 0; offsetY = (CAPITAL_Y * zoom); draw(); }
+
+    container.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
+    window.addEventListener('mousemove', e => { if (isDragging) { offsetX += e.clientX - lastX; offsetY += e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; draw(); } });
+    window.addEventListener('mouseup', () => isDragging = false);
+    container.addEventListener('touchstart', e => { if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; } }, {passive: false});
+    container.addEventListener('touchmove', e => { if (isDragging && e.touches.length === 1) { offsetX += e.touches[0].clientX - lastX; offsetY += e.touches[0].clientY - lastY; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; draw(); } }, {passive: false});
+    container.addEventListener('touchend', () => isDragging = false);
+
+    function updateDropdown() {
+        const sel = document.getElementById('tName'); sel.innerHTML = "";
+        Object.keys(state.titans).forEach(k => { if (!state.movedToday.includes(k)) { let o = document.createElement("option"); o.value = k; o.text = k; sel.add(o); } });
+    }
+    function advanceDay() { state.day++; state.movedToday = []; document.getElementById('currentDay').innerText = state.day; updateDropdown(); draw(); }
+    function undo() { if (state.history.length > 0) { let h = state.history.pop(); state.titans = h.t; state.movedToday = h.m; draw(); updateDropdown(); } }
+    window.onload = () => { updateDropdown(); centerMap(); };
+</script>
+</body>
+</html>
+

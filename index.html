@@ -1,41 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Titan Tracker v39.8 - Coordinate Master</title>
+    <title>Titan Tracker v40.1 - Doctrine Final</title>
     <style>
         body { background: #000; color: #0f0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        #ui-top { background: #111; border-bottom: 1px solid #333; padding: 5px; display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 5px; align-items: center; }
+        #ui-top { background: #111; border-bottom: 1px solid #333; padding: 10px; display: grid; grid-template-columns: 1.2fr 1fr 2fr; gap: 10px; align-items: center; }
         #viewport-container { position: relative; flex-grow: 1; background: #050505; overflow: hidden; touch-action: none; cursor: grab; }
         #viewport-container:active { cursor: grabbing; }
         canvas { display: block; width: 100%; height: 100%; }
-        .stat-box { border: 1px solid #333; padding: 4px; background: #000; text-align: center; font-weight: bold; font-size: 11px; }
-        
-        #calendar-container { border: 1px solid #444; height: 20px; position: relative; background: #222; overflow: hidden; }
+        .stat-box { border: 1px solid #333; padding: 6px; background: #000; text-align: center; font-weight: bold; font-size: 13px; }
+        #calendar-container { border: 1px solid #444; height: 25px; position: relative; background: #222; overflow: hidden; }
         #awake-progress { height: 100%; width: 0%; background: #0f0; transition: width 0.3s; }
-        #calendar-text { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 11px; color: #fff; z-index: 2; font-weight: bold; }
-
-        .controls { padding: 8px; background: #111; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; border-top: 1px solid #333; }
-        button, select, input { padding: 6px; background: #000; color: #0f0; border: 1px solid #0f0; font-family: inherit; font-size: 11px; cursor: pointer; }
-        .btn-exec { grid-column: span 2; background: #300; color: #fff; border-color: #f00; font-weight: bold; }
-        #log { height: 50px; background: #000; padding: 5px; font-size: 10px; color: #aaa; border-top: 1px solid #222; overflow-y: scroll; white-space: pre-wrap; }
+        #calendar-text { position: absolute; width: 100%; text-align: center; top: 4px; font-size: 11px; color: #fff; z-index: 2; font-weight: bold; }
+        .controls { padding: 10px; background: #111; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; border-top: 1px solid #333; }
+        button, select, input { padding: 8px; background: #000; color: #0f0; border: 1px solid #0f0; font-family: inherit; font-size: 12px; }
+        .btn-exec { grid-column: span 2; background: #300; color: #fff; border-color: #f00; font-weight: bold; cursor: pointer; }
+        #log { height: 40px; background: #000; padding: 5px; font-size: 11px; color: #aaa; border-top: 1px solid #222; overflow-y: scroll; }
     </style>
 </head>
 <body>
     <div id="ui-top">
-        <div class="stat-box" style="color: #0f0;">G-ZONE: ±1.75</div>
+        <div class="stat-box" id="activeSeason" style="color: #0f0;">GENESIS</div>
         <div class="stat-box" style="color: #0af;">W-ZONE: X > 3</div>
         <div id="calendar-container">
-            <div id="calendar-text">AWAKE CYCLE: DAY <span id="currentDay">1</span> / 228</div>
+            <div id="calendar-text"><span id="calDate">1 First Genesis</span> (Day <span id="currentDay">1</span>/228)</div>
             <div id="awake-progress"></div>
         </div>
     </div>
-
-    <div id="viewport-container">
-        <canvas id="mainCanvas"></canvas>
-    </div>
-
-    <div id="log">> v39.8: COORDINATE LABELS ENABLED. GREEN ZONE BARRIER REINFORCED.</div>
-
+    <div id="viewport-container"><canvas id="mainCanvas"></canvas></div>
+    <div id="log">> v40.1: PINCH ZOOM & DOCTRINE CALENDAR ONLINE.</div>
     <div class="controls">
         <button onclick="undo()">UNDO</button>
         <button onclick="centerMap()">CENTER</button>
@@ -54,15 +47,6 @@
 
     const WRAP_X = 314, POLE_Y = 157, WALL_Y = 103.6, CAPITAL_Y = 83.6, COAST_X = 3, G_LIMIT = 1.75, MAX_DAYS = 228, MAX_MOVE = 400;
     
-    const features = [
-        { name: "NORTH WALL", type: "line", y: WALL_Y, color: "#f00" },
-        { name: "CAPITAL", x: 0, y: CAPITAL_Y, color: "#fff" },
-        { name: "COASTAL CITY", x: COAST_X, y: CAPITAL_Y, color: "#0af" },
-        { name: "THE TREE", x: -7.78, y: 91.38, color: "#0f0" },
-        { name: "RELIGIOUS", x: -1.41, y: 82.19, color: "#f0f" },
-        { name: "EQUATOR", type: "line", y: 0, color: "#333" }
-    ];
-
     let state = {
         titans: {
             Lava: {x:-10, y:70, c:'red', moved:0, path:[{x:-10, y:70}]},
@@ -75,138 +59,119 @@
         movedToday: [], day: 1, history: []
     };
 
-    let zoom = 8, offsetX = 0, offsetY = 0, isDragging = false, lastX, lastY;
+    let zoom = 8, offsetX = 0, offsetY = 0, isDragging = false, lastX, lastY, initialDist = null;
+
+    function getCal(d) {
+        const sSize = 76; // 32+32+12
+        const seasons = ["Genesis", "Ascent", "Descent", "Ending"];
+        const sIdx = Math.floor((d-1) / sSize);
+        const sDay = (d-1) % sSize + 1;
+        const season = seasons[sIdx] || "Dormant";
+        if (sDay > 64) return { season, label: `${sDay-64} Eclipse ${season}`, modifier: season === "Descent" ? 0.5 : 1 };
+        const month = sDay <= 32 ? "First" : "Second";
+        const mDay = sDay <= 32 ? sDay : sDay - 32;
+        return { season, label: `${mDay} ${month} ${season}`, modifier: season === "Descent" ? 0.5 : 1 };
+    }
 
     function draw() {
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
+        canvas.width = container.clientWidth; canvas.height = container.clientHeight;
         const cx = canvas.width/2 + offsetX, cy = canvas.height/2 + offsetY;
         ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // GRID & COORDINATE LABELS
+        // GRID & STICKY COORDS
         ctx.strokeStyle = "#1a1a1a"; ctx.lineWidth = 1;
-        ctx.font = "10px Courier New"; ctx.fillStyle = "#0f0";
-        
-        // Vertical lines & X Labels
+        ctx.font = "bold 10px Arial"; ctx.fillStyle = "#0f0";
         for(let x = -WRAP_X; x <= WRAP_X; x += 10) {
             ctx.beginPath(); ctx.moveTo(cx + x*zoom, cy - POLE_Y*zoom); ctx.lineTo(cx + x*zoom, cy + POLE_Y*zoom); ctx.stroke();
             if(x % 50 === 0) {
-                ctx.fillText(x, cx + x*zoom - 10, cy - POLE_Y*zoom - 10); // Top
-                ctx.fillText(x, cx + x*zoom - 10, cy + POLE_Y*zoom + 20); // Bottom
+                let sx = Math.max(10, Math.min(canvas.width - 30, cx + x*zoom));
+                ctx.fillText(x, sx, 15); ctx.fillText(x, sx, canvas.height - 10);
             }
         }
-        // Horizontal lines & Y Labels
         for(let y = -POLE_Y; y <= POLE_Y; y += 10) {
             ctx.beginPath(); ctx.moveTo(cx - WRAP_X*zoom, cy - y*zoom); ctx.lineTo(cx + WRAP_X*zoom, cy - y*zoom); ctx.stroke();
             if(y % 50 === 0) {
-                ctx.fillText(y, cx - WRAP_X*zoom - 35, cy - y*zoom + 4); // Left
-                ctx.fillText(y, cx + WRAP_X*zoom + 10, cy - y*zoom + 4); // Right
+                let sy = Math.max(25, Math.min(canvas.height - 25, cy - y*zoom));
+                ctx.fillText(y, 5, sy); ctx.fillText(y, canvas.width - 35, sy);
             }
         }
 
-        // ZONES
-        ctx.fillStyle = "rgba(0, 150, 255, 0.15)";
-        ctx.fillRect(cx + COAST_X*zoom, cy - POLE_Y*zoom, (WRAP_X - COAST_X)*zoom, (POLE_Y * 2)*zoom);
-        ctx.fillStyle = "rgba(0, 255, 0, 0.15)";
-        ctx.fillRect(cx - G_LIMIT*zoom, cy - WALL_Y*zoom, (G_LIMIT*2)*zoom, (WALL_Y - CAPITAL_Y)*zoom);
+        // ZONES & TITANS (Standard Render)
+        ctx.fillStyle = "rgba(0, 150, 255, 0.15)"; ctx.fillRect(cx + COAST_X*zoom, cy - POLE_Y*zoom, (WRAP_X - COAST_X)*zoom, (POLE_Y * 2)*zoom);
+        ctx.fillStyle = "rgba(0, 255, 0, 0.15)"; ctx.fillRect(cx - G_LIMIT*zoom, cy - WALL_Y*zoom, (G_LIMIT*2)*zoom, (WALL_Y - CAPITAL_Y)*zoom);
 
-        // LANDMARKS
-        features.forEach(f => {
-            ctx.fillStyle = f.color;
-            if(f.type === "line") {
-                ctx.strokeStyle = f.color; ctx.beginPath(); ctx.moveTo(cx-WRAP_X*zoom, cy-f.y*zoom); ctx.lineTo(cx+WRAP_X*zoom, cy-f.y*zoom); ctx.stroke();
-            } else {
-                ctx.beginPath(); ctx.arc(cx+f.x*zoom, cy-f.y*zoom, 4, 0, 7); ctx.fill();
-                ctx.fillStyle = "#fff"; ctx.fillText(f.name, cx+f.x*zoom+8, cy-f.y*zoom-4);
-            }
-        });
-
-        // TITANS
         for(let k in state.titans) {
             let t = state.titans[k];
-            ctx.strokeStyle = t.c; ctx.lineWidth = 2;
-            ctx.beginPath();
-            t.path.forEach((p, i) => { if(i===0) ctx.moveTo(cx+p.x*zoom, cy-p.y*zoom); else ctx.lineTo(cx+p.x*zoom, cy-p.y*zoom); });
-            ctx.stroke();
-            
+            ctx.strokeStyle = t.c; ctx.lineWidth = 2; ctx.beginPath();
+            t.path.forEach((p, i) => { if(i===0) ctx.moveTo(cx+p.x*zoom, cy-p.y*zoom); else ctx.lineTo(cx+p.x*zoom, cy-p.y*zoom); }); ctx.stroke();
             ctx.fillStyle = t.c; ctx.beginPath(); ctx.arc(cx+t.x*zoom, cy-t.y*zoom, 6, 0, 7); ctx.fill();
-            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Courier New";
-            ctx.fillText(`${k} (${t.x.toFixed(1)}, ${t.y.toFixed(1)})`, cx+t.x*zoom+10, cy-t.y*zoom-5);
-            ctx.fillStyle = (t.moved > 350) ? "#f00" : "#aaa"; ctx.font = "9px Courier New";
-            ctx.fillText(`MOVE: ${t.moved.toFixed(0)}/400 DT`, cx+t.x*zoom+10, cy-t.y*zoom+7);
+            ctx.fillStyle = "#fff"; ctx.fillText(`${k} (${t.x.toFixed(1)}, ${t.y.toFixed(1)})`, cx+t.x*zoom+10, cy-t.y*zoom-5);
+            ctx.fillStyle = t.moved > 350 ? "#f00" : "#aaa"; ctx.fillText(`MOVE: ${t.moved.toFixed(0)}/400`, cx+t.x*zoom+10, cy-t.y*zoom+7);
         }
-
-        // WORLD BORDER
-        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
-        ctx.strokeRect(cx - WRAP_X*zoom, cy - POLE_Y*zoom, (WRAP_X*2)*zoom, (POLE_Y*2)*zoom);
-    }
-
-    // CONTROLS (PC & TABLET)
-    container.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.max(1, Math.min(50, zoom * (e.deltaY > 0 ? 0.9 : 1.1))); draw(); }, {passive: false});
-    container.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
-    window.addEventListener('mousemove', e => { if (isDragging) { offsetX += e.clientX - lastX; offsetY += e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; draw(); } });
-    window.addEventListener('mouseup', () => isDragging = false);
-    container.addEventListener('touchstart', e => { if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; } }, {passive: false});
-    container.addEventListener('touchmove', e => { if (isDragging && e.touches.length === 1) { offsetX += e.touches[0].clientX - lastX; offsetY += e.touches[0].clientY - lastY; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; draw(); } }, {passive: false});
-    container.addEventListener('touchend', () => isDragging = false);
-
-    function updateCalendar() {
-        document.getElementById('currentDay').innerText = state.day;
-        const bar = document.getElementById('awake-progress');
-        const pct = (state.day / MAX_DAYS) * 100;
-        bar.style.width = pct + "%";
-        bar.style.backgroundColor = pct < 75 ? "#0f0" : pct < 90 ? "#ff0" : "#f00";
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.strokeRect(cx - WRAP_X*zoom, cy - POLE_Y*zoom, (WRAP_X*2)*zoom, (POLE_Y*2)*zoom);
     }
 
     function applyMove() {
         const name = document.getElementById('tName').value;
-        const t = state.titans[name];
-        if (!t || state.day > MAX_DAYS) return;
-        
+        const t = state.titans[name]; if (!t || state.day > MAX_DAYS) return;
         state.history.push(JSON.parse(JSON.stringify(state)));
-        const roll = parseInt(document.getElementById('mRoll').value) || 0;
+        const r = parseInt(document.getElementById('mRoll').value) || 0;
         const d8 = parseInt(document.getElementById('mDir').value) || 1;
-        const offset = parseFloat(document.getElementById('mShift').value) || 0;
-        const dist = (roll <= 10) ? 0 : (roll <= 25) ? 5 : (roll <= 50) ? 10 : (roll <= 75) ? 20 : (roll <= 90) ? 30 : 40;
+        const off = parseFloat(document.getElementById('mShift').value) || 0;
+        let dist = (r <= 10) ? 0 : (r <= 25) ? 5 : (r <= 50) ? 10 : (r <= 75) ? 20 : (r <= 90) ? 30 : 40;
         
-        let baseAngle = 90 - ((d8 - 1) * 45);
-        let finalAngle = (baseAngle - offset) * (Math.PI / 180);
-        let nx = t.x + (Math.cos(finalAngle) * dist);
-        let ny = t.y + (Math.sin(finalAngle) * dist);
+        const cal = getCal(state.day);
+        dist *= cal.modifier; // Apply Descent 0.5x
 
-        // WORLD WRAP & POLES
-        if (nx > WRAP_X) nx = -WRAP_X + (nx - WRAP_X); 
-        if (nx < -WRAP_X) nx = WRAP_X + (nx + WRAP_X);
-        if (ny > POLE_Y) ny = POLE_Y; 
-        if (ny < -POLE_Y) ny = -POLE_Y;
+        let ang = (90 - ((d8 - 1) * 45) - off) * (Math.PI / 180);
+        let nx = t.x + (Math.cos(ang) * dist), ny = t.y + (Math.sin(ang) * dist);
 
-        // NORTH WALL BOUNCE (Except Earth)
         if (ny > WALL_Y) ny = (name === "Earth") ? WALL_Y : WALL_Y - (ny - WALL_Y);
-
-        // GREEN ZONE BARRIER (Except Air)
-        if (name !== "Air" && ny >= CAPITAL_Y && ny <= WALL_Y) {
-            if (nx > -G_LIMIT && nx < G_LIMIT) {
-                nx = (nx > 0) ? G_LIMIT : -G_LIMIT;
-            }
-        }
-
-        // ZONE LIMITS
+        if (nx > WRAP_X) nx -= (WRAP_X*2); if (nx < -WRAP_X) nx += (WRAP_X*2);
+        if (name !== "Air" && ny >= CAPITAL_Y && ny <= WALL_Y && Math.abs(nx) < G_LIMIT) nx = nx > 0 ? G_LIMIT : -G_LIMIT;
         if (name === "Water" && nx < COAST_X) nx = COAST_X;
-        if (["Lava", "Earth", "Sand"].includes(name) && nx > 8.0) nx = 8.0;
-
+        
         t.x = nx; t.y = ny; t.moved += dist; t.path.push({x:nx, y:ny});
         state.movedToday.push(name); updateDropdown(); draw();
     }
+
+    // PINCH ZOOM LOGIC
+    container.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+        else { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
+    }, {passive:false});
+    container.addEventListener('touchmove', e => {
+        if (e.touches.length === 2 && initialDist) {
+            let dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+            zoom = Math.max(1, Math.min(50, zoom * (dist / initialDist))); initialDist = dist; draw();
+        } else if (isDragging) {
+            offsetX += e.touches[0].clientX - lastX; offsetY += e.touches[0].clientY - lastY;
+            lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; draw();
+        }
+    }, {passive:false});
+    container.addEventListener('touchend', () => { isDragging = false; initialDist = null; });
+
+    // PC CONTROLS
+    container.addEventListener('wheel', e => { zoom = Math.max(1, Math.min(50, zoom * (e.deltaY > 0 ? 0.9 : 1.1))); draw(); }, {passive:false});
+    container.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
+    window.addEventListener('mousemove', e => { if (isDragging) { offsetX += e.clientX - lastX; offsetY += e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; draw(); } });
+    window.addEventListener('mouseup', () => isDragging = false);
 
     function updateDropdown() {
         const sel = document.getElementById('tName'); sel.innerHTML = "";
         Object.keys(state.titans).forEach(k => { if (!state.movedToday.includes(k)) { let o = document.createElement("option"); o.value = k; o.text = k; sel.add(o); } });
     }
-    function advanceDay() { if (state.day < MAX_DAYS) { state.day++; state.movedToday = []; updateCalendar(); updateDropdown(); draw(); } }
-    function undo() { if (state.history.length > 0) { state = state.history.pop(); updateCalendar(); updateDropdown(); draw(); } }
+    function updateCalendarUI() {
+        const cal = getCal(state.day);
+        document.getElementById('calDate').innerText = cal.label;
+        document.getElementById('activeSeason').innerText = cal.season.toUpperCase();
+        document.getElementById('currentDay').innerText = state.day;
+        document.getElementById('awake-progress').style.width = (state.day / MAX_DAYS * 100) + "%";
+    }
+    function advanceDay() { if (state.day < MAX_DAYS) { state.day++; state.movedToday = []; updateCalendarUI(); updateDropdown(); draw(); } }
+    function undo() { if (state.history.length > 0) { state = state.history.pop(); updateCalendarUI(); updateDropdown(); draw(); } }
     function centerMap() { offsetX = 0; offsetY = (CAPITAL_Y * zoom); draw(); }
-
-    window.onload = () => { updateCalendar(); updateDropdown(); centerMap(); };
+    window.onload = () => { updateCalendarUI(); updateDropdown(); centerMap(); };
 </script>
 </body>
 </html>

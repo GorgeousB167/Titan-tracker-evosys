@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Encounter Generator</title>
+    <style>
+        :root {
+            --bg-color: #0f1113;
+            --card-bg: #1a1d21;
+            --animal-color: #a3cfbb;
+            --undead-color: #d63384;
+            --outsider-color: #6f42c1;
+            --automata-color: #0dcaf0;
+            --folk-color: #ffc107;
+            --text-main: #e9ecef;
+            --text-dim: #adb5bd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+        }
+
+        .container { width: 100%; max-width: 650px; }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            border-left: 6px solid #444;
+        }
+
+        /* Category Specific Borders */
+        .border-animal { border-color: var(--animal-color); }
+        .border-undead { border-color: var(--undead-color); }
+        .border-outsider { border-color: var(--outsider-color); }
+        .border-automata { border-color: var(--automata-color); }
+        .border-folk { border-color: var(--folk-color); }
+
+        h2 { margin: 0 0 15px 0; font-size: 1.2rem; letter-spacing: 1px; text-transform: uppercase; }
+
+        .display {
+            background: #000;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            min-height: 80px;
+        }
+
+        .row { margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .label { color: var(--text-dim); font-size: 0.85rem; font-weight: bold; }
+        .value { font-weight: bold; color: #fff; }
+        .modifier { font-style: italic; color: var(--animal-color); }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            color: #000;
+            background: #fff;
+            transition: opacity 0.2s;
+        }
+
+        button:active { opacity: 0.7; }
+        .btn-encounter { background-color: #eee; }
+        .btn-folk { background-color: var(--folk-color); }
+
+        .stealth-box {
+            font-size: 0.9rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div id="encounter-card" class="card">
+        <h2 id="category-title">Creature Encounter</h2>
+        <div class="display" id="encounter-display">
+            <div style="text-align:center; padding-top:20px; color:#666;">Roll to generate an entity...</div>
+        </div>
+        <button class="btn-encounter" onclick="rollEncounter()">ROLL CREATURE</button>
+    </div>
+
+    <div class="card border-folk">
+        <h2>Folk (People)</h2>
+        <div class="display" id="folk-display">
+            <div style="text-align:center; padding-top:20px; color:#666;">Check for locals...</div>
+        </div>
+        <button class="btn-folk" onclick="rollFolk()">FIND FOLK</button>
+    </div>
+
+    <div class="card">
+        <h2>Distance & Stealth</h2>
+        <div class="display" id="distance-display">
+             <div style="text-align:center; padding-top:20px; color:#666;">Scan surroundings...</div>
+        </div>
+        <button onclick="rollDistance()">GENERATE PROXIMITY</button>
+    </div>
+
+</div>
+
+<script>
+    const data = {
+        "Animal": {
+            sub: ["Shadow", "Bulk", "Guardian", "Domestic", "Sentry", "Excavate", "Aquatic"],
+            modifiers: ["Eiderdown", "Callous", "Giant", "Fuzzy", "Iron-hoof", "Silent", "Dusky", "Pale"],
+            suffix: ["Hopper", "Runner", "Stalker", "Grazer", "Slinker"],
+            color: "border-animal"
+        },
+        "Undead": {
+            sub: ["Dredge", "Savage", "Spectral", "Imbued"],
+            color: "border-undead"
+        },
+        "Outsider": {
+            sub: ["Ocular", "Tentacular", "Parasitic", "Dimensional", "Highline", "Lowline"],
+            color: "border-outsider"
+        },
+        "Automata": {
+            sub: ["Technical (Carry)", "Technical (Load)", "Technical (Transport)", "Custodian", "Surveil", "Implement", "Elemental"],
+            color: "border-automata"
+        }
+    };
+
+    const folkTypes = ["Merchant", "Traveler", "Guard", "Hermit", "Scavenger", "Scholar", "Refugee"];
+    const folkMoods = ["Friendly", "Wary", "Hostile", "Indifferent", "Desperate"];
+
+    function getRand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function d(sides) { return Math.floor(Math.random() * sides) + 1; }
+
+    function rollEncounter() {
+        const categories = Object.keys(data);
+        const catName = getRand(categories);
+        const catData = data[catName];
+        const subType = getRand(catData.sub);
+        const quantity = d(6) + d(6);
+        
+        let nameOutput = subType;
+        
+        // Apply special Animal naming logic
+        if(catName === "Animal") {
+            const mod = getRand(catData.modifiers);
+            const suff = getRand(catData.suffix);
+            nameOutput = `<span class="modifier">${mod}</span> ${subType} ${suff}`;
+        }
+
+        const card = document.getElementById('encounter-card');
+        card.className = "card " + catData.color;
+        
+        document.getElementById('category-title').innerText = catName + " Encounter";
+        document.getElementById('encounter-display').innerHTML = `
+            <div class="row"><span class="label">CLASSIFICATION</span><span class="value">${catName}</span></div>
+            <div class="row"><span class="label">DESIGNATION</span><span class="value">${nameOutput}</span></div>
+            <div class="row"><span class="label">COUNT</span><span class="value">${quantity}</span></div>
+        `;
+    }
+
+    function rollFolk() {
+        const type = getRand(folkTypes);
+        const mood = getRand(folkMoods);
+        const count = d(4);
+        
+        document.getElementById('folk-display').innerHTML = `
+            <div class="row"><span class="label">PERSONA</span><span class="value">${type}</span></div>
+            <div class="row"><span class="label">TEMPERAMENT</span><span class="value">${mood}</span></div>
+            <div class="row"><span class="label">GROUP SIZE</span><span class="value">${count}</span></div>
+        `;
+    }
+
+    function rollDistance() {
+        const dist = (d(10) * d(10)) + 5;
+        const stealthRoll = d(20);
+        const isStealthed = stealthRoll > 14;
+        
+        document.getElementById('distance-display').innerHTML = `
+            <div class="row"><span class="label">DISTANCE</span><span class="value">${dist} Meters</span></div>
+            <div class="row">
+                <span class="label">STEALTH</span>
+                <span class="stealth-box" style="color:${isStealthed ? '#ff5252' : '#4fc3f7'}">
+                    ${isStealthed ? 'HIDDEN / CAMOUFLAGED' : 'VISIBLE'}
+                </span>
+            </div>
+        `;
+    }
+</script>
+
+</body>
+</html>

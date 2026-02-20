@@ -3,202 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Encounter Generator</title>
+    <title>Encounter Decoder v2</title>
     <style>
         :root {
-            --bg-color: #0f1113;
-            --card-bg: #1a1d21;
-            --animal-color: #a3cfbb;
-            --undead-color: #d63384;
-            --outsider-color: #6f42c1;
-            --automata-color: #0dcaf0;
-            --folk-color: #ffc107;
-            --text-main: #e9ecef;
-            --text-dim: #adb5bd;
+            --bg: #0b0c0d;
+            --card: #1a1c20;
+            --accent: #00e676;
+            --text: #ffffff;
+            --animal: #a3cfbb;
+            --undead: #ff4d4d;
+            --outsider: #bb86fc;
+            --automata: #03dac6;
+            --folk: #ffca28;
         }
 
-        body {
-            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 15px;
-        }
-
-        .container { width: 100%; max-width: 650px; }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-            border-left: 6px solid #444;
-        }
-
-        /* Category Specific Borders */
-        .border-animal { border-color: var(--animal-color); }
-        .border-undead { border-color: var(--undead-color); }
-        .border-outsider { border-color: var(--outsider-color); }
-        .border-automata { border-color: var(--automata-color); }
-        .border-folk { border-color: var(--folk-color); }
-
-        h2 { margin: 0 0 15px 0; font-size: 1.2rem; letter-spacing: 1px; text-transform: uppercase; }
-
-        .display {
-            background: #000;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            min-height: 80px;
-        }
-
-        .row { margin-bottom: 8px; display: flex; justify-content: space-between; }
-        .label { color: var(--text-dim); font-size: 0.85rem; font-weight: bold; }
-        .value { font-weight: bold; color: #fff; }
-        .modifier { font-style: italic; color: var(--animal-color); }
-
-        button {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            color: #000;
-            background: #fff;
-            transition: opacity 0.2s;
-        }
-
-        button:active { opacity: 0.7; }
-        .btn-encounter { background-color: #eee; }
-        .btn-folk { background-color: var(--folk-color); }
-
-        .stealth-box {
-            font-size: 0.9rem;
-            padding: 4px 8px;
-            border-radius: 4px;
-            background: #333;
-        }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 500px; }
+        .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: var(--accent); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .field { display: flex; flex-direction: column; }
+        label { font-size: 0.65rem; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+        select, input { background: #25282e; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; font-size: 1rem; }
+        button { width: 100%; padding: 16px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:active { transform: scale(0.97); }
+        .result { background: #000; border-radius: 10px; padding: 25px; border-left: 6px solid var(--accent); min-height: 200px; }
+        .tag { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-bottom: 12px; text-transform: uppercase; color: #000; }
+        .name { font-size: 1.8rem; font-weight: 800; line-height: 1.1; margin-bottom: 8px; }
+        .desc { color: #aaa; font-size: 0.9rem; margin-bottom: 20px; line-height: 1.4; }
+        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #111; padding: 12px; border-radius: 6px; font-size: 0.8rem; }
+        .warning { color: #ff4d4d; font-weight: bold; border: 1px solid #ff4d4d; padding: 5px; margin-top: 10px; text-align: center; border-radius: 4px; font-size: 0.75rem; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    
-    <div id="encounter-card" class="card">
-        <h2 id="category-title">Creature Encounter</h2>
-        <div class="display" id="encounter-display">
-            <div style="text-align:center; padding-top:20px; color:#666;">Roll to generate an entity...</div>
-        </div>
-        <button class="btn-encounter" onclick="rollEncounter()">ROLL CREATURE</button>
-    </div>
-
-    <div class="card border-folk">
-        <h2>Folk (People)</h2>
-        <div class="display" id="folk-display">
-            <div style="text-align:center; padding-top:20px; color:#666;">Check for locals...</div>
-        </div>
-        <button class="btn-folk" onclick="rollFolk()">FIND FOLK</button>
-    </div>
-
     <div class="card">
-        <h2>Distance & Stealth</h2>
-        <div class="display" id="distance-display">
-             <div style="text-align:center; padding-top:20px; color:#666;">Scan surroundings...</div>
+        <h2>Manual Decoder</h2>
+        <div class="field" style="margin-bottom:15px">
+            <label>Terrain</label>
+            <select id="terrain">
+                <option>Forest</option><option>Underground</option><option>Arctic</option><option>Coast</option>
+                <option>Desert</option><option>Grassland</option><option>Mountain</option><option>Swamp</option>
+            </select>
         </div>
-        <button onclick="rollDistance()">GENERATE PROXIMITY</button>
+        <div class="input-grid">
+            <div class="field"><label>d100 (Table)</label><input type="number" id="d100"></div>
+            <div class="field"><label>d12 (Species/Qty)</label><input type="number" id="d12"></div>
+            <div class="field"><label>d8 (Size/Infuse)</label><input type="number" id="d8"></div>
+            <div class="field"><label>d20 (Range/Hide)</label><input type="number" id="d20"></div>
+        </div>
+        <button onclick="decode()">INTERPRET DOCTRINE</button>
     </div>
-
+    <div class="result" id="out"><div style="text-align:center;color:#444;padding-top:80px">Awaiting Dice Input...</div></div>
 </div>
 
 <script>
-    const data = {
-        "Animal": {
-            sub: ["Shadow", "Bulk", "Guardian", "Domestic", "Sentry", "Excavate", "Aquatic"],
-            modifiers: ["Eiderdown", "Callous", "Giant", "Fuzzy", "Iron-hoof", "Silent", "Dusky", "Pale"],
-            suffix: ["Hopper", "Runner", "Stalker", "Grazer", "Slinker"],
-            color: "border-animal"
-        },
-        "Undead": {
-            sub: ["Dredge", "Savage", "Spectral", "Imbued"],
-            color: "border-undead"
-        },
-        "Outsider": {
-            sub: ["Ocular", "Tentacular", "Parasitic", "Dimensional", "Highline", "Lowline"],
-            color: "border-outsider"
-        },
-        "Automata": {
-            sub: ["Technical (Carry)", "Technical (Load)", "Technical (Transport)", "Custodian", "Surveil", "Implement", "Elemental"],
-            color: "border-automata"
-        }
-    };
+const tables = {
+    "Forest": [{r:[1,15],t:"AN",s:"Shadow"},{r:[16,30],t:"AN",s:"Sentry"},{r:[31,45],t:"AN",s:"Bulk"},{r:[46,55],t:"AN",s:"Guardian"},{r:[56,60],t:"AN",s:"Excavate"},{r:[61,72],t:"UD",s:"Dredge"},{r:[73,76],t:"UD",s:"Savage"},{r:[77,79],t:"UD",s:"Spectral"},{r:[80,80],t:"UD",s:"Imbued"},{r:[81,85],t:"OS",s:"Parasitic"},{r:[86,90],t:"OS",s:"Ocular"},{r:[91,93],t:"OS",s:"Dimensional"},{r:[94,96],t:"AU",s:"Surveil"},{r:[97,98],t:"AU",s:"Custodian"},{r:[99,99],t:"AU",s:"Implement"},{r:[100,100],t:"FK",s:"Traveler"}],
+    "Underground": [{r:[1,10],t:"AN",s:"Excavate"},{r:[11,15],t:"AN",s:"Shadow"},{r:[16,20],t:"AN",s:"Aquatic"},{r:[21,45],t:"UD",s:"Dredge"},{r:[46,55],t:"UD",s:"Savage"},{r:[56,65],t:"UD",s:"Spectral"},{r:[66,75],t:"UD",s:"Imbued"},{r:[76,82],t:"OS",s:"Parasitic"},{r:[83,86],t:"OS",s:"Tentacular"},{r:[87,89],t:"OS",s:"Dimensional"},{r:[90,94],t:"AU",s:"Custodian"},{r:[95,97],t:"AU",s:"Implement"},{r:[98,99],t:"AU",s:"Elemental"},{r:[100,100],t:"FK",s:"Hermit"}],
+    "Arctic": [{r:[1,20],t:"AN",s:"Bulk"},{r:[21,35],t:"AN",s:"Shadow"},{r:[36,45],t:"AN",s:"Sentry"},{r:[46,50],t:"AN",s:"Guardian"},{r:[51,68],t:"UD",s:"Dredge"},{r:[69,74],t:"UD",s:"Savage"},{r:[75,78],t:"UD",s:"Spectral"},{r:[79,80],t:"UD",s:"Imbued"},{r:[81,87],t:"OS",s:"Ocular"},{r:[88,91],t:"OS",s:"Highline"},{r:[92,93],t:"OS",s:"Dimensional"},{r:[94,97],t:"AU",s:"Implement"},{r:[98,99],t:"AU",s:"Technical"},{r:[100,100],t:"FK",s:"Survivor"}],
+    "Coast": [{r:[1,25],t:"AN",s:"Aquatic"},{r:[26,40],t:"AN",s:"Sentry"},{r:[41,55],t:"AN",s:"Shadow"},{r:[56,65],t:"AN",s:"Bulk"},{r:[66,77],t:"UD",s:"Dredge"},{r:[78,80],t:"UD",s:"Savage"},{r:[81,83],t:"UD",s:"Spectral"},{r:[84,85],t:"UD",s:"Imbued"},{r:[86,90],t:"OS",s:"Tentacular"},{r:[91,92],t:"OS",s:"Ocular"},{r:[93,94],t:"OS",s:"Hybrid"},{r:[95,97],t:"AU",s:"Technical"},{r:[98,99],t:"AU",s:"Surveil"},{r:[100,100],t:"FK",s:"Merchant"}],
+    "Desert": [{r:[1,25],t:"AN",s:"Excavate"},{r:[26,40],t:"AN",s:"Shadow"},{r:[41,50],t:"AN",s:"Slider"},{r:[51,55],t:"AN",s:"Sentry"},{r:[56,70],t:"UD",s:"Dredge"},{r:[71,74],t:"UD",s:"Savage"},{r:[75,78],t:"UD",s:"Spectral"},{r:[79,80],t:"UD",s:"Imbued"},{r:[81,86],t:"OS",s:"Ocular"},{r:[87,90],t:"OS",s:"Lowline"},{r:[91,92],t:"OS",s:"Dimensional"},{r:[93,96],t:"AU",s:"Surveil"},{r:[97,99],t:"AU",s:"Custodian"},{r:[100,100],t:"FK",s:"Scholar"}],
+    "Grassland": [{r:[1,35],t:"AN",s:"Bulk"},{r:[36,55],t:"AN",s:"Shadow"},{r:[56,65],t:"AN",s:"Sentry"},{r:[66,70],t:"AN",s:"Domestic"},{r:[71,82],t:"UD",s:"Dredge"},{r:[83,84],t:"UD",s:"Savage"},{r:[85,87],t:"UD",s:"Spectral"},{r:[88,88],t:"UD",s:"Imbued"},{r:[89,92],t:"OS",s:"Lowline"},{r:[93,95],t:"OS",s:"Ocular"},{r:[96,97],t:"AU",s:"Technical"},{r:[98,99],t:"AU",s:"Surveil"},{r:[100,100],t:"FK",s:"Nomad"}],
+    "Mountain": [{r:[1,20],t:"AN",s:"Sentry"},{r:[21,35],t:"AN",s:"Bulk"},{r:[36,45],t:"AN",s:"Shadow"},{r:[46,65],t:"UD",s:"Dredge"},{r:[66,72],t:"UD",s:"Savage"},{r:[73,78],t:"UD",s:"Spectral"},{r:[79,80],t:"UD",s:"Imbued"},{r:[81,87],t:"OS",s:"Highline"},{r:[88,90],t:"OS",s:"Dimensional"},{r:[91,92],t:"OS",s:"Ocular"},{r:[93,96],t:"AU",s:"Surveil"},{r:[97,99],t:"AU",s:"Custodian"},{r:[100,100],t:"FK",s:"Refugee"}],
+    "Swamp": [{r:[1,20],t:"AN",s:"Aquatic"},{r:[21,35],t:"AN",s:"Shadow"},{r:[36,45],t:"AN",s:"Excavate"},{r:[46,50],t:"AN",s:"Sentry"},{r:[51,70],t:"UD",s:"Dredge"},{r:[71,78],t:"UD",s:"Savage"},{r:[79,83],t:"UD",s:"Spectral"},{r:[84,85],t:"UD",s:"Imbued"},{r:[86,90],t:"OS",s:"Tentacular"},{r:[91,94],t:"OS",s:"Parasitic"},{r:[95,97],t:"AU",s:"Implement"},{r:[98,99],t:"AU",s:"Surveil"},{r:[100,100],t:"FK",s:"Scavenger"}]
+};
 
-    const folkTypes = ["Merchant", "Traveler", "Guard", "Hermit", "Scavenger", "Scholar", "Refugee"];
-    const folkMoods = ["Friendly", "Wary", "Hostile", "Indifferent", "Desperate"];
+const analogs = ["Hopper","Slinker","Snapper","Grazer","Tunneler","Watcher","Crawler","Slider"];
+const elements = ["Flame","Frost","Storm","Stone","Aether"];
 
-    function getRand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-    function d(sides) { return Math.floor(Math.random() * sides) + 1; }
+function decode() {
+    const d100 = parseInt(document.getElementById('d100').value);
+    const d12 = parseInt(document.getElementById('d12').value);
+    const d8 = parseInt(document.getElementById('d8').value);
+    const d20 = parseInt(document.getElementById('d20').value);
+    const t = document.getElementById('terrain').value;
 
-    function rollEncounter() {
-        const categories = Object.keys(data);
-        const catName = getRand(categories);
-        const catData = data[catName];
-        const subType = getRand(catData.sub);
-        const quantity = d(6) + d(6);
-        
-        let nameOutput = subType;
-        
-        // Apply special Animal naming logic
-        if(catName === "Animal") {
-            const mod = getRand(catData.modifiers);
-            const suff = getRand(catData.suffix);
-            nameOutput = `<span class="modifier">${mod}</span> ${subType} ${suff}`;
-        }
+    if (!d100 || !d12 || !d8 || !d20) return;
 
-        const card = document.getElementById('encounter-card');
-        card.className = "card " + catData.color;
-        
-        document.getElementById('category-title').innerText = catName + " Encounter";
-        document.getElementById('encounter-display').innerHTML = `
-            <div class="row"><span class="label">CLASSIFICATION</span><span class="value">${catName}</span></div>
-            <div class="row"><span class="label">DESIGNATION</span><span class="value">${nameOutput}</span></div>
-            <div class="row"><span class="label">COUNT</span><span class="value">${quantity}</span></div>
-        `;
+    const entry = tables[t].find(e => d100 >= e.r[0] && d100 <= e.r[1]);
+    let type = "", color = "", canInfuse = false, baseline = "";
+
+    switch(entry.t) {
+        case "AN": type="Animal"; color="var(--animal)"; canInfuse=true; break;
+        case "UD": type="Undead"; color="var(--undead)"; canInfuse=true; break;
+        case "OS": type="Outsider"; color="var(--outsider)"; break;
+        case "AU": type="Automata"; color="var(--automata)"; canInfuse=true; break;
+        case "FK": type="Folk"; color="var(--folk)"; break;
     }
 
-    function rollFolk() {
-        const type = getRand(folkTypes);
-        const mood = getRand(folkMoods);
-        const count = d(4);
-        
-        document.getElementById('folk-display').innerHTML = `
-            <div class="row"><span class="label">PERSONA</span><span class="value">${type}</span></div>
-            <div class="row"><span class="label">TEMPERAMENT</span><span class="value">${mood}</span></div>
-            <div class="row"><span class="label">GROUP SIZE</span><span class="value">${count}</span></div>
-        `;
+    // Size Logic
+    let sizeLabel = "Normal";
+    if(d8 >= 4) sizeLabel = "Large";
+    if(d8 >= 6) sizeLabel = "Abnormal";
+    if(d8 === 8) sizeLabel = "GIGANTIC";
+
+    // Quantity Logic
+    let qty = 1;
+    if(entry.t === "FK") qty = "Narrator Choice";
+    else if(d8 === 8) qty = 1;
+    else {
+        let base = (entry.s === "Dredge" || entry.s === "Excavate") ? d12 : Math.ceil(d12/2);
+        if(entry.t === "OS" || entry.s === "Imbued") base = Math.min(base, 2);
+        qty = d8 >= 6 ? 1 : (d8 >= 4 ? Math.ceil(base/2) : base);
     }
 
-    function rollDistance() {
-        const dist = (d(10) * d(10)) + 5;
-        const stealthRoll = d(20);
-        const isStealthed = stealthRoll > 14;
-        
-        document.getElementById('distance-display').innerHTML = `
-            <div class="row"><span class="label">DISTANCE</span><span class="value">${dist} Meters</span></div>
-            <div class="row">
-                <span class="label">STEALTH</span>
-                <span class="stealth-box" style="color:${isStealthed ? '#ff5252' : '#4fc3f7'}">
-                    ${isStealthed ? 'HIDDEN / CAMOUFLAGED' : 'VISIBLE'}
-                </span>
-            </div>
-        `;
-    }
+    // Naming
+    let infusion = (canInfuse && d8 >= 7) ? elements[(d12-1)%5] + "-Infused " : "";
+    let species = entry.t === "AN" ? analogs[(d12-1)%8] : "";
+    let finalName = `${infusion}${entry.s} ${species}`;
+
+    // Range
+    let range = "Melee";
+    if(d20 > 4) range = "Very Close";
+    if(d20 > 8) range = "Close";
+    if(d20 > 12) range = "Far";
+    if(d20 > 16) range = "Very Far";
+    let stealthed = d20 >= 18;
+
+    document.getElementById('out').innerHTML = `
+        <span class="tag" style="background:${color}">${type}</span>
+        <div class="name">${finalName}</div>
+        <div class="desc">${sizeLabel} size for its kind. ${qty === 1 ? 'A solitary presence.' : 'A group of '+qty+' spotted.'}</div>
+        <div class="meta-grid">
+            <div>RANGE: <strong>${range}</strong></div>
+            <div style="color:${stealthed?'#ff4d4d':'#00e676'}">${stealthed?'⚠️ STEALTHED':'VISIBLE'}</div>
+            <div>SIZE: ${sizeLabel}</div>
+            <div>QTY: ${qty}</div>
+        </div>
+        ${d8 === 8 ? '<div class="warning">⚠️ EXTREME ENCOUNTER: POSSIBLY UNWINNABLE</div>' : ''}
+    `;
+}
 </script>
-
 </body>
 </html>

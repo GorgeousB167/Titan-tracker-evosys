@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="theme-color" content="#0b0c0d">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="data:application/json,{'name':'EncounterDecoder','short_name':'Decoder','display':'standalone','start_url':'.','background_color':'#0b0c0d','theme_color':'#0b0c0d'}">
+
     <title>Encounter Decoder v2</title>
     <style>
         :root {
@@ -17,22 +24,31 @@
             --folk: #ffca28;
         }
 
-        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        body { 
+            font-family: 'Inter', system-ui, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            overscroll-behavior: none; /* Prevents pull-to-refresh */
+        }
         .container { width: 100%; max-width: 500px; }
         .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h2 { color: var(--accent); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+        h2 { color: var(--accent); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; margin-top: 0; }
         .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .field { display: flex; flex-direction: column; }
         label { font-size: 0.65rem; color: #888; margin-bottom: 5px; text-transform: uppercase; }
-        select, input { background: #25282e; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; font-size: 1rem; }
-        button { width: 100%; padding: 16px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:active { transform: scale(0.97); }
-        .result { background: #000; border-radius: 10px; padding: 25px; border-left: 6px solid var(--accent); min-height: 200px; }
+        select, input { background: #25282e; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; font-size: 1rem; -webkit-appearance: none; }
+        button { width: 100%; padding: 16px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+        button:active { transform: scale(0.97); background: #00c866; }
+        .result { background: #000; border-radius: 10px; padding: 25px; border-left: 6px solid var(--accent); min-height: 200px; box-sizing: border-box; }
         .tag { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-bottom: 12px; text-transform: uppercase; color: #000; }
         .name { font-size: 1.8rem; font-weight: 800; line-height: 1.1; margin-bottom: 8px; }
         .desc { color: #aaa; font-size: 0.9rem; margin-bottom: 20px; line-height: 1.4; }
         .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #111; padding: 12px; border-radius: 6px; font-size: 0.8rem; }
-        .warning { color: #ff4d4d; font-weight: bold; border: 1px solid #ff4d4d; padding: 5px; margin-top: 10px; text-align: center; border-radius: 4px; font-size: 0.75rem; }
+        .warning { color: #ff4d4d; font-weight: bold; border: 1px solid #ff4d4d; padding: 8px; margin-top: 15px; text-align: center; border-radius: 4px; font-size: 0.75rem; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -41,21 +57,23 @@
     <div class="card">
         <h2>Manual Decoder</h2>
         <div class="field" style="margin-bottom:15px">
-            <label>Terrain</label>
+            <label>Current Terrain</label>
             <select id="terrain">
                 <option>Forest</option><option>Underground</option><option>Arctic</option><option>Coast</option>
                 <option>Desert</option><option>Grassland</option><option>Mountain</option><option>Swamp</option>
             </select>
         </div>
         <div class="input-grid">
-            <div class="field"><label>d100 (Table)</label><input type="number" id="d100"></div>
-            <div class="field"><label>d12 (Species/Qty)</label><input type="number" id="d12"></div>
-            <div class="field"><label>d8 (Size/Infuse)</label><input type="number" id="d8"></div>
-            <div class="field"><label>d20 (Range/Hide)</label><input type="number" id="d20"></div>
+            <div class="field"><label>d100 (Table)</label><input type="number" id="d100" inputmode="numeric"></div>
+            <div class="field"><label>d12 (Species/Qty)</label><input type="number" id="d12" inputmode="numeric"></div>
+            <div class="field"><label>d8 (Size/Infuse)</label><input type="number" id="d8" inputmode="numeric"></div>
+            <div class="field"><label>d20 (Range/Hide)</label><input type="number" id="d20" inputmode="numeric"></div>
         </div>
-        <button onclick="decode()">INTERPRET DOCTRINE</button>
+        <button onclick="decode()">Interpret Doctrine</button>
     </div>
-    <div class="result" id="out"><div style="text-align:center;color:#444;padding-top:80px">Awaiting Dice Input...</div></div>
+    <div class="result" id="out">
+        <div style="text-align:center;color:#444;padding-top:60px">Awaiting Dice Input...</div>
+    </div>
 </div>
 
 <script>
@@ -83,23 +101,21 @@ function decode() {
     if (!d100 || !d12 || !d8 || !d20) return;
 
     const entry = tables[t].find(e => d100 >= e.r[0] && d100 <= e.r[1]);
-    let type = "", color = "", canInfuse = false, baseline = "";
+    let type = "", color = "", canInfuse = false;
 
     switch(entry.t) {
-        case "AN": type="Animal"; color="var(--animal)"; canInfuse=true; break;
-        case "UD": type="Undead"; color="var(--undead)"; canInfuse=true; break;
-        case "OS": type="Outsider"; color="var(--outsider)"; break;
-        case "AU": type="Automata"; color="var(--automata)"; canInfuse=true; break;
-        case "FK": type="Folk"; color="var(--folk)"; break;
+        case "AN": type="Natural (Animal)"; color="var(--animal)"; canInfuse=true; break;
+        case "UD": type="Unnatural (Undead)"; color="var(--undead)"; canInfuse=true; break;
+        case "OS": type="Unnatural (Outsider)"; color="var(--outsider)"; break;
+        case "AU": type="Unnatural (Automata)"; color="var(--automata)"; canInfuse=true; break;
+        case "FK": type="Natural (Folk)"; color="var(--folk)"; break;
     }
 
-    // Size Logic
     let sizeLabel = "Normal";
     if(d8 >= 4) sizeLabel = "Large";
     if(d8 >= 6) sizeLabel = "Abnormal";
     if(d8 === 8) sizeLabel = "GIGANTIC";
 
-    // Quantity Logic
     let qty = 1;
     if(entry.t === "FK") qty = "Narrator Choice";
     else if(d8 === 8) qty = 1;
@@ -109,12 +125,10 @@ function decode() {
         qty = d8 >= 6 ? 1 : (d8 >= 4 ? Math.ceil(base/2) : base);
     }
 
-    // Naming
     let infusion = (canInfuse && d8 >= 7) ? elements[(d12-1)%5] + "-Infused " : "";
     let species = entry.t === "AN" ? analogs[(d12-1)%8] : "";
     let finalName = `${infusion}${entry.s} ${species}`;
 
-    // Range
     let range = "Melee";
     if(d20 > 4) range = "Very Close";
     if(d20 > 8) range = "Close";
@@ -125,14 +139,14 @@ function decode() {
     document.getElementById('out').innerHTML = `
         <span class="tag" style="background:${color}">${type}</span>
         <div class="name">${finalName}</div>
-        <div class="desc">${sizeLabel} size for its kind. ${qty === 1 ? 'A solitary presence.' : 'A group of '+qty+' spotted.'}</div>
+        <div class="desc">${sizeLabel} size. ${qty === 1 ? 'Solitary.' : 'Group of '+qty+'.'}</div>
         <div class="meta-grid">
             <div>RANGE: <strong>${range}</strong></div>
             <div style="color:${stealthed?'#ff4d4d':'#00e676'}">${stealthed?'⚠️ STEALTHED':'VISIBLE'}</div>
             <div>SIZE: ${sizeLabel}</div>
             <div>QTY: ${qty}</div>
         </div>
-        ${d8 === 8 ? '<div class="warning">⚠️ EXTREME ENCOUNTER: POSSIBLY UNWINNABLE</div>' : ''}
+        ${d8 === 8 ? '<div class="warning">⚠️ GIGANTIC: EXTREME DANGER</div>' : ''}
     `;
 }
 </script>

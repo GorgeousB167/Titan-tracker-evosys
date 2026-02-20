@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Titan Tracker v39.7 - Universal Control</title>
+    <title>Titan Tracker v39.8 - Coordinate Master</title>
     <style>
         body { background: #000; color: #0f0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         #ui-top { background: #111; border-bottom: 1px solid #333; padding: 5px; display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 5px; align-items: center; }
@@ -34,7 +34,7 @@
         <canvas id="mainCanvas"></canvas>
     </div>
 
-    <div id="log">> v39.7: PC/TABLET CONTROLS SYNCED. STAMINA (400 DT) TRACKING ACTIVE.</div>
+    <div id="log">> v39.8: COORDINATE LABELS ENABLED. GREEN ZONE BARRIER REINFORCED.</div>
 
     <div class="controls">
         <button onclick="undo()">UNDO</button>
@@ -83,17 +83,25 @@
         const cx = canvas.width/2 + offsetX, cy = canvas.height/2 + offsetY;
         ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // GRID & UNIT LABELS
+        // GRID & COORDINATE LABELS
         ctx.strokeStyle = "#1a1a1a"; ctx.lineWidth = 1;
-        ctx.font = "10px Courier"; ctx.fillStyle = "#555";
+        ctx.font = "10px Courier New"; ctx.fillStyle = "#0f0";
         
+        // Vertical lines & X Labels
         for(let x = -WRAP_X; x <= WRAP_X; x += 10) {
             ctx.beginPath(); ctx.moveTo(cx + x*zoom, cy - POLE_Y*zoom); ctx.lineTo(cx + x*zoom, cy + POLE_Y*zoom); ctx.stroke();
-            if(x % 20 === 0) ctx.fillText(x, cx + x*zoom + 2, cy + 12); // X labels at Equator
+            if(x % 50 === 0) {
+                ctx.fillText(x, cx + x*zoom - 10, cy - POLE_Y*zoom - 10); // Top
+                ctx.fillText(x, cx + x*zoom - 10, cy + POLE_Y*zoom + 20); // Bottom
+            }
         }
+        // Horizontal lines & Y Labels
         for(let y = -POLE_Y; y <= POLE_Y; y += 10) {
             ctx.beginPath(); ctx.moveTo(cx - WRAP_X*zoom, cy - y*zoom); ctx.lineTo(cx + WRAP_X*zoom, cy - y*zoom); ctx.stroke();
-            if(y % 20 === 0) ctx.fillText(y, cx + 5, cy - y*zoom - 2); // Y labels at Prime Meridian
+            if(y % 50 === 0) {
+                ctx.fillText(y, cx - WRAP_X*zoom - 35, cy - y*zoom + 4); // Left
+                ctx.fillText(y, cx + WRAP_X*zoom + 10, cy - y*zoom + 4); // Right
+            }
         }
 
         // ZONES
@@ -113,7 +121,7 @@
             }
         });
 
-        // TITANS & STAMINA
+        // TITANS
         for(let k in state.titans) {
             let t = state.titans[k];
             ctx.strokeStyle = t.c; ctx.lineWidth = 2;
@@ -122,10 +130,10 @@
             ctx.stroke();
             
             ctx.fillStyle = t.c; ctx.beginPath(); ctx.arc(cx+t.x*zoom, cy-t.y*zoom, 6, 0, 7); ctx.fill();
-            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Courier";
+            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Courier New";
             ctx.fillText(`${k} (${t.x.toFixed(1)}, ${t.y.toFixed(1)})`, cx+t.x*zoom+10, cy-t.y*zoom-5);
-            ctx.fillStyle = "#aaa"; ctx.font = "9px Courier";
-            ctx.fillText(`STAMINA: ${t.moved.toFixed(0)}/${MAX_MOVE} DT`, cx+t.x*zoom+10, cy-t.y*zoom+7);
+            ctx.fillStyle = (t.moved > 350) ? "#f00" : "#aaa"; ctx.font = "9px Courier New";
+            ctx.fillText(`MOVE: ${t.moved.toFixed(0)}/400 DT`, cx+t.x*zoom+10, cy-t.y*zoom+7);
         }
 
         // WORLD BORDER
@@ -133,19 +141,11 @@
         ctx.strokeRect(cx - WRAP_X*zoom, cy - POLE_Y*zoom, (WRAP_X*2)*zoom, (POLE_Y*2)*zoom);
     }
 
-    // PC CONTROLS
-    container.addEventListener('wheel', e => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        zoom = Math.max(1, Math.min(50, zoom * delta));
-        draw();
-    }, {passive: false});
-
+    // CONTROLS (PC & TABLET)
+    container.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.max(1, Math.min(50, zoom * (e.deltaY > 0 ? 0.9 : 1.1))); draw(); }, {passive: false});
     container.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
     window.addEventListener('mousemove', e => { if (isDragging) { offsetX += e.clientX - lastX; offsetY += e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; draw(); } });
     window.addEventListener('mouseup', () => isDragging = false);
-
-    // TABLET CONTROLS
     container.addEventListener('touchstart', e => { if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; } }, {passive: false});
     container.addEventListener('touchmove', e => { if (isDragging && e.touches.length === 1) { offsetX += e.touches[0].clientX - lastX; offsetY += e.touches[0].clientY - lastY; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; draw(); } }, {passive: false});
     container.addEventListener('touchend', () => isDragging = false);
@@ -164,26 +164,33 @@
         if (!t || state.day > MAX_DAYS) return;
         
         state.history.push(JSON.parse(JSON.stringify(state)));
-        
         const roll = parseInt(document.getElementById('mRoll').value) || 0;
         const d8 = parseInt(document.getElementById('mDir').value) || 1;
         const offset = parseFloat(document.getElementById('mShift').value) || 0;
-        
         const dist = (roll <= 10) ? 0 : (roll <= 25) ? 5 : (roll <= 50) ? 10 : (roll <= 75) ? 20 : (roll <= 90) ? 30 : 40;
         
         let baseAngle = 90 - ((d8 - 1) * 45);
         let finalAngle = (baseAngle - offset) * (Math.PI / 180);
-        let nx = t.x + (Math.cos(finalAngle) * dist), ny = t.y + (Math.sin(finalAngle) * dist);
+        let nx = t.x + (Math.cos(finalAngle) * dist);
+        let ny = t.y + (Math.sin(finalAngle) * dist);
 
-        // DOCTRINE COLLISIONS
-        if (ny > WALL_Y) ny = (name === "Earth") ? WALL_Y : WALL_Y - (ny - WALL_Y);
-        if (ny < -POLE_Y) ny = -POLE_Y; 
+        // WORLD WRAP & POLES
         if (nx > WRAP_X) nx = -WRAP_X + (nx - WRAP_X); 
         if (nx < -WRAP_X) nx = WRAP_X + (nx + WRAP_X);
+        if (ny > POLE_Y) ny = POLE_Y; 
+        if (ny < -POLE_Y) ny = -POLE_Y;
 
+        // NORTH WALL BOUNCE (Except Earth)
+        if (ny > WALL_Y) ny = (name === "Earth") ? WALL_Y : WALL_Y - (ny - WALL_Y);
+
+        // GREEN ZONE BARRIER (Except Air)
         if (name !== "Air" && ny >= CAPITAL_Y && ny <= WALL_Y) {
-            if (nx > -G_LIMIT && nx < G_LIMIT) nx = (nx > 0) ? G_LIMIT : -G_LIMIT;
+            if (nx > -G_LIMIT && nx < G_LIMIT) {
+                nx = (nx > 0) ? G_LIMIT : -G_LIMIT;
+            }
         }
+
+        // ZONE LIMITS
         if (name === "Water" && nx < COAST_X) nx = COAST_X;
         if (["Lava", "Earth", "Sand"].includes(name) && nx > 8.0) nx = 8.0;
 
@@ -195,13 +202,7 @@
         const sel = document.getElementById('tName'); sel.innerHTML = "";
         Object.keys(state.titans).forEach(k => { if (!state.movedToday.includes(k)) { let o = document.createElement("option"); o.value = k; o.text = k; sel.add(o); } });
     }
-
-    function advanceDay() { 
-        if (state.day >= MAX_DAYS) return;
-        state.day++; state.movedToday = []; 
-        updateCalendar(); updateDropdown(); draw(); 
-    }
-
+    function advanceDay() { if (state.day < MAX_DAYS) { state.day++; state.movedToday = []; updateCalendar(); updateDropdown(); draw(); } }
     function undo() { if (state.history.length > 0) { state = state.history.pop(); updateCalendar(); updateDropdown(); draw(); } }
     function centerMap() { offsetX = 0; offsetY = (CAPITAL_Y * zoom); draw(); }
 

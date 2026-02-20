@@ -12,6 +12,7 @@
 
     <title>Campaign Master Hub</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Overpass:wght@400;800&family=Overpass+Mono:wght@700&display=swap');
         :root {
             --bg: #0b0c0d;
             --card: #1a1c20;
@@ -22,16 +23,16 @@
         }
 
         body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100dvh;
-            overflow: hidden;
-            overscroll-behavior: none;
-        }
+    /* Use the standard Overpass for the general UI */
+    font-family: 'Overpass', sans-serif; 
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+}
 
         /* Doctrine Header */
         #ui-top {
@@ -44,17 +45,19 @@
             z-index: 10;
         }
 
-        .stat-box {
-            border: 1px solid #333;
-            padding: 8px;
-            background: #000;
-            text-align: center;
-            font-weight: bold;
-            font-size: 11px;
-            letter-spacing: 1.5px;
-            border-radius: 4px;
-            text-transform: uppercase;
-        }
+.stat-box {
+    /* Use Overpass Mono for the Sector/G-Zone stats to make them look like data */
+    font-family: 'Overpass Mono', monospace;
+    border: 1px solid #333;
+    padding: 8px;
+    background: #000;
+    text-align: center;
+    font-weight: bold;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
 
         /* Main Content */
         .hub-container {
@@ -100,6 +103,7 @@
         }
 
         .nav-button {
+            font-family: 'Overpass', sans-serif;
             padding: 25px;
             font-size: 1.1rem;
             font-weight: 800;
@@ -154,3 +158,4 @@
 
 </body>
 </html>
+

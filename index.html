@@ -1,31 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Titan Tracker v40.4 - Standalone</title>
+    <title>Titan Tracker v40.5 - Persistent State</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    
     <link rel="manifest" href="data:application/manifest+json,{'name':'Titan Tracker','short_name':'Tracker','display':'standalone','start_url':'.','background_color':'#000','theme_color':'#000'}">
-
     <style>
         * { box-sizing: border-box; }
         body { background: #000; color: #0f0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
-        #ui-top { background: #111; border-bottom: 1px solid #333; padding: 5px; display: grid; grid-template-columns: 1fr 1fr 2.5fr; gap: 5px; align-items: center; z-index: 10; }
+        #ui-top { background: #111; border-bottom: 1px solid #333; padding: 5px; display: grid; grid-template-columns: 1fr 1fr 2.5fr; gap: 5px; align-items: center; z-index: 20; }
         #viewport-container { position: relative; flex-grow: 1; background: #050505; overflow: hidden; touch-action: none; }
         canvas { display: block; width: 100%; height: 100%; }
         .stat-box { border: 1px solid #333; padding: 4px; background: #000; text-align: center; font-weight: bold; font-size: 10px; }
         #calendar-container { border: 1px solid #444; height: 22px; position: relative; background: #222; overflow: hidden; }
         #awake-progress { height: 100%; width: 0%; background: #0f0; }
         #calendar-text { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 10px; color: #fff; z-index: 2; font-weight: bold; }
-        .controls { padding: 8px; background: #111; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; border-top: 1px solid #333; padding-bottom: calc(15px + env(safe-area-inset-bottom)); z-index: 10; }
-        button, select, input { padding: 6px; background: #000; color: #0f0; border: 1px solid #0f0; font-family: inherit; font-size: 12px; height: 42px; }
+        .controls { padding: 8px; background: #111; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; border-top: 1px solid #333; padding-bottom: calc(15px + env(safe-area-inset-bottom)); z-index: 20; }
+        button, select, input { padding: 6px; background: #000; color: #0f0; border: 1px solid #0f0; font-family: inherit; font-size: 11px; height: 42px; }
         .btn-exec { grid-column: span 2; background: #300; color: #fff; border-color: #f00; font-weight: bold; }
+        .btn-reset { background: #200; color: #f55; border-color: #500; font-size: 9px; }
     </style>
 </head>
 <body>
     <div id="ui-top">
-        <div class="stat-box" id="activeSeason" style="color: #0f0;">GENESIS</div>
+        <div class="stat-box" id="activeSeason">GENESIS</div>
         <div class="stat-box" style="color: #0af;">W-ZONE: X>3</div>
         <div id="calendar-container">
             <div id="calendar-text"><span id="calDate">1 First Genesis</span> (Day <span id="currentDay">1</span>/228)</div>
@@ -41,7 +39,8 @@
         <input type="number" id="mRoll" placeholder="d100">
         <input type="number" id="mDir" placeholder="Dir">
         <button class="btn-exec" onclick="applyMove()">EXECUTE TURN</button>
-        <button onclick="advanceDay()" style="grid-column: span 4; background: #002; color: #0af;">NEXT DAY</button>
+        <button onclick="advanceDay()" style="grid-column: span 3; background: #002; color: #0af;">NEXT DAY</button>
+        <button class="btn-reset" onclick="hardReset()">RESET ALL</button>
     </div>
 
 <script>
@@ -56,7 +55,7 @@
         { name: "CAPITAL", x: 0, y: CAPITAL_Y, c: "#fff" },
         { name: "COASTAL CITY", x: COAST_X, y: CAPITAL_Y, c: "#0af" },
         { name: "THE TREE", x: -7.78, y: 91.38, c: "#0f0" },
-        { name: "RELIGIOUS", x: -1.41, y: 82.19, c: "#f0f" }
+        { name: "RELIGIOUS SITE", x: -1.41, y: 82.19, c: "#f0f" }
     ];
 
     let state = {
@@ -72,6 +71,13 @@
     };
 
     let zoom = 8, offsetX = 0, offsetY = 0, isDragging = false, lastX, lastY, initialDist = null;
+
+    function save() { localStorage.setItem('titanState', JSON.stringify(state)); }
+    function load() {
+        const saved = localStorage.getItem('titanState');
+        if (saved) { state = JSON.parse(saved); updateCalendarUI(); updateDropdown(); draw(); }
+    }
+    function hardReset() { if(confirm("Reset entire 228-day cycle?")) { localStorage.removeItem('titanState'); location.reload(); } }
 
     function getCal(d) {
         const sSize = 76; const seasons = ["Genesis", "Ascent", "Descent", "Ending"];
@@ -89,23 +95,26 @@
         const cx = canvas.width/2 + offsetX, cy = canvas.height/2 + offsetY;
         ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // GRID & BRIGHT COORDINATES
-        ctx.strokeStyle = "#1a1a1a"; ctx.lineWidth = 1; ctx.font = "bold 13px Courier New"; ctx.fillStyle = "#fff";
+        // GRID 
+        ctx.strokeStyle = "#1a1a1a"; ctx.lineWidth = 1;
         for(let x = -WRAP_X; x <= WRAP_X; x += 10) {
             ctx.beginPath(); ctx.moveTo(cx + x*zoom, cy - POLE_Y*zoom); ctx.lineTo(cx + x*zoom, cy + POLE_Y*zoom); ctx.stroke();
-            if(x % 50 === 0) ctx.fillText(x, cx + x*zoom + 2, cy + 15);
         }
         for(let y = -POLE_Y; y <= POLE_Y; y += 10) {
             ctx.beginPath(); ctx.moveTo(cx - WRAP_X*zoom, cy - y*zoom); ctx.lineTo(cx + WRAP_X*zoom, cy - y*zoom); ctx.stroke();
-            if(y % 50 === 0) ctx.fillText(y, cx + 5, cy - y*zoom - 5);
         }
 
-        // ZONES
-        ctx.fillStyle = "rgba(0, 255, 0, 0.12)"; ctx.fillRect(cx - G_LIMIT*zoom, cy - WALL_Y*zoom, (G_LIMIT*2)*zoom, (WALL_Y - CAPITAL_Y)*zoom);
+        // WATER ZONE (X > 3)
+        ctx.fillStyle = "rgba(0, 100, 255, 0.15)";
+        ctx.fillRect(cx + 3*zoom, cy - POLE_Y*zoom, (WRAP_X - 3)*zoom, (POLE_Y*2)*zoom);
+
+        // GREEN ZONE (Steel Wall Visual)
+        ctx.fillStyle = "rgba(0, 255, 0, 0.12)"; 
+        ctx.fillRect(cx - G_LIMIT*zoom, cy - WALL_Y*zoom, (G_LIMIT*2)*zoom, (WALL_Y - CAPITAL_Y)*zoom);
 
         // LANDMARKS
         features.forEach(f => {
-            ctx.strokeStyle = f.c; ctx.fillStyle = f.c;
+            ctx.strokeStyle = f.c; ctx.fillStyle = f.c; ctx.font = "bold 10px Arial";
             if(f.type === "line") {
                 ctx.beginPath(); ctx.moveTo(cx - WRAP_X*zoom, cy - f.y*zoom); ctx.lineTo(cx + WRAP_X*zoom, cy - f.y*zoom); ctx.stroke();
                 ctx.fillText(f.name, cx - WRAP_X*zoom + 10, cy - f.y*zoom - 5);
@@ -115,16 +124,34 @@
             }
         });
 
-        // TITANS & STAMINA HUD
+        // TITANS & HUD
         for(let k in state.titans) {
             let t = state.titans[k];
             ctx.strokeStyle = t.c; ctx.lineWidth = 2.5; ctx.beginPath();
             t.path.forEach((p, i) => { if(i===0) ctx.moveTo(cx+p.x*zoom, cy-p.y*zoom); else ctx.lineTo(cx+p.x*zoom, cy-p.y*zoom); }); ctx.stroke();
             ctx.fillStyle = t.c; ctx.beginPath(); ctx.arc(cx+t.x*zoom, cy-t.y*zoom, 8, 0, 7); ctx.fill();
-            ctx.fillStyle = "#fff"; ctx.font = "bold 12px Arial";
+            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial";
             ctx.fillText(`${k} (${t.x.toFixed(1)}, ${t.y.toFixed(1)})`, cx+t.x*zoom+12, cy-t.y*zoom-6);
             ctx.fillStyle = "#0f0"; ctx.fillText(`${t.moved.toFixed(0)}/400 DT`, cx+t.x*zoom+12, cy-t.y*zoom+10);
         }
+
+        // STATIC EDGE COORDINATES (Pinned to Viewport)
+        ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.font = "bold 12px Courier New";
+        for(let x = -WRAP_X; x <= WRAP_X; x += 50) {
+            let screenX = cx + x*zoom;
+            if(screenX > 10 && screenX < canvas.width - 10) {
+                ctx.fillText(x, screenX - 10, 15);
+                ctx.fillText(x, screenX - 10, canvas.height - 10);
+            }
+        }
+        for(let y = -POLE_Y; y <= POLE_Y; y += 50) {
+            let screenY = cy - y*zoom;
+            if(screenY > 20 && screenY < canvas.height - 20) {
+                ctx.fillText(y, 5, screenY + 5);
+                ctx.fillText(y, canvas.width - 35, screenY + 5);
+            }
+        }
+
         ctx.strokeStyle = "#fff"; ctx.strokeRect(cx - WRAP_X*zoom, cy - POLE_Y*zoom, (WRAP_X*2)*zoom, (POLE_Y*2)*zoom);
     }
 
@@ -141,7 +168,6 @@
         let ang = (90 - ((d8 - 1) * 45) - off) * (Math.PI / 180);
         let nx = t.x + (Math.cos(ang) * dist), ny = t.y + (Math.sin(ang) * dist);
 
-        // STEEL WALL COLLISION
         if (name !== "Air" && ny >= CAPITAL_Y && ny <= WALL_Y && Math.abs(nx) < G_LIMIT) {
             nx = nx >= 0 ? G_LIMIT : -G_LIMIT;
         }
@@ -149,10 +175,10 @@
         if (nx > WRAP_X) nx -= (WRAP_X*2); if (nx < -WRAP_X) nx += (WRAP_X*2);
         
         t.x = nx; t.y = ny; t.moved += dist; t.path.push({x:nx, y:ny});
-        state.movedToday.push(name); updateDropdown(); draw();
+        state.movedToday.push(name); updateDropdown(); save(); draw();
     }
 
-    // MULTI-TOUCH ENGINE
+    // INTERACTION ENGINE
     container.addEventListener('touchstart', e => {
         if (e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
         else { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
@@ -184,10 +210,10 @@
         document.getElementById('currentDay').innerText = state.day;
         document.getElementById('awake-progress').style.width = (state.day / MAX_DAYS * 100) + "%";
     }
-    function advanceDay() { if (state.day < MAX_DAYS) { state.day++; state.movedToday = []; updateCalendarUI(); updateDropdown(); draw(); } }
-    function undo() { if (state.history.length > 0) { state = state.history.pop(); updateCalendarUI(); updateDropdown(); draw(); } }
+    function advanceDay() { if (state.day < MAX_DAYS) { state.day++; state.movedToday = []; updateCalendarUI(); updateDropdown(); save(); draw(); } }
+    function undo() { if (state.history.length > 0) { state = state.history.pop(); updateCalendarUI(); updateDropdown(); save(); draw(); } }
     function centerMap() { offsetX = 0; offsetY = (CAPITAL_Y * zoom); draw(); }
-    window.onload = () => { updateCalendarUI(); updateDropdown(); centerMap(); };
+    window.onload = () => { load(); updateCalendarUI(); updateDropdown(); centerMap(); };
 </script>
 </body>
 </html>

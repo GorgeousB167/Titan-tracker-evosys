@@ -1,22 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Titan Tracker v40.2 - Layout Fix</title>
+    <title>Titan Tracker v40.3 - The Steel Wall</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         * { box-sizing: border-box; }
         body { background: #000; color: #0f0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
-        #ui-top { background: #111; border-bottom: 1px solid #333; padding: 5px; display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 5px; align-items: center; z-index: 10; }
-        #viewport-container { position: relative; flex-grow: 1; background: #050505; overflow: hidden; touch-action: none; }
+        #ui-top { background: #111; border-bottom: 1px solid #333; padding: 5px; display: grid; grid-template-columns: 1fr 1fr 2.5fr; gap: 5px; align-items: center; z-index: 10; }
+        #viewport-container { position: relative; flex-grow: 1; background: #050505; overflow: hidden; touch-action: none; cursor: grab; }
         canvas { display: block; width: 100%; height: 100%; }
-        .stat-box { border: 1px solid #333; padding: 4px; background: #000; text-align: center; font-weight: bold; font-size: 11px; }
+        .stat-box { border: 1px solid #333; padding: 4px; background: #000; text-align: center; font-weight: bold; font-size: 10px; }
         #calendar-container { border: 1px solid #444; height: 22px; position: relative; background: #222; overflow: hidden; }
-        #awake-progress { height: 100%; width: 0%; background: #0f0; transition: width 0.3s; }
+        #awake-progress { height: 100%; width: 0%; background: #0f0; }
         #calendar-text { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 10px; color: #fff; z-index: 2; font-weight: bold; }
-        .controls { padding: 8px; background: #111; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; border-top: 1px solid #333; padding-bottom: 20px; z-index: 10; }
-        button, select, input { padding: 6px; background: #000; color: #0f0; border: 1px solid #0f0; font-family: inherit; font-size: 12px; height: 35px; }
+        .controls { padding: 8px; background: #111; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; border-top: 1px solid #333; padding-bottom: 25px; z-index: 10; }
+        button, select, input { padding: 6px; background: #000; color: #0f0; border: 1px solid #0f0; font-family: inherit; font-size: 12px; height: 38px; }
         .btn-exec { grid-column: span 2; background: #300; color: #fff; border-color: #f00; font-weight: bold; }
-        #log { height: 35px; background: #000; padding: 5px; font-size: 10px; color: #aaa; border-top: 1px solid #222; overflow-y: scroll; display: none; }
     </style>
 </head>
 <body>
@@ -36,7 +35,7 @@
         <select id="tName"></select>
         <input type="number" id="mRoll" placeholder="d100">
         <input type="number" id="mDir" placeholder="Dir">
-        <button class="btn-exec" id="execBtn" onclick="applyMove()">EXECUTE TURN</button>
+        <button class="btn-exec" onclick="applyMove()">EXECUTE TURN</button>
         <button onclick="advanceDay()" style="grid-column: span 4; background: #002; color: #0af;">NEXT DAY</button>
     </div>
 
@@ -47,6 +46,14 @@
 
     const WRAP_X = 314, POLE_Y = 157, WALL_Y = 103.6, CAPITAL_Y = 83.6, COAST_X = 3, G_LIMIT = 1.75, MAX_DAYS = 228;
     
+    const features = [
+        { name: "NORTH WALL", type: "line", y: WALL_Y, c: "#f00" },
+        { name: "CAPITAL", x: 0, y: CAPITAL_Y, c: "#fff" },
+        { name: "COASTAL CITY", x: COAST_X, y: CAPITAL_Y, c: "#0af" },
+        { name: "THE TREE", x: -7.78, y: 91.38, c: "#0f0" },
+        { name: "RELIGIOUS", x: -1.41, y: 82.19, c: "#f0f" }
+    ];
+
     let state = {
         titans: {
             Lava: {x:-10, y:70, c:'red', moved:0, path:[{x:-10, y:70}]},
@@ -62,15 +69,14 @@
     let zoom = 8, offsetX = 0, offsetY = 0, isDragging = false, lastX, lastY, initialDist = null;
 
     function getCal(d) {
-        const sSize = 76;
-        const seasons = ["Genesis", "Ascent", "Descent", "Ending"];
-        const sIdx = Math.floor((d-1) / sSize);
-        const sDay = (d-1) % sSize + 1;
+        const sSize = 76; const seasons = ["Genesis", "Ascent", "Descent", "Ending"];
+        const sIdx = Math.floor((d-1) / sSize); const sDay = (d-1) % sSize + 1;
         const season = seasons[sIdx] || "Dormant";
-        if (sDay > 64) return { season, label: `${sDay-64} Eclipse ${season}`, mod: season === "Descent" ? 0.5 : 1 };
+        let mod = (season === "Descent") ? 0.5 : 1;
+        if (sDay > 64) return { season, label: `${sDay-64} Eclipse ${season}`, mod };
         const month = sDay <= 32 ? "First" : "Second";
         const mDay = sDay <= 32 ? sDay : sDay - 32;
-        return { season, label: `${mDay} ${month} ${season}`, mod: season === "Descent" ? 0.5 : 1 };
+        return { season, label: `${mDay} ${month} ${season}`, mod };
     }
 
     function draw() {
@@ -78,45 +84,48 @@
         const cx = canvas.width/2 + offsetX, cy = canvas.height/2 + offsetY;
         ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // GRID LINES
-        ctx.strokeStyle = "#1a1a1a"; ctx.lineWidth = 1;
+        // GRID & AXIS LABELS
+        ctx.strokeStyle = "#1a1a1a"; ctx.lineWidth = 1; ctx.font = "10px Arial"; ctx.fillStyle = "#333";
         for(let x = -WRAP_X; x <= WRAP_X; x += 10) {
             ctx.beginPath(); ctx.moveTo(cx + x*zoom, cy - POLE_Y*zoom); ctx.lineTo(cx + x*zoom, cy + POLE_Y*zoom); ctx.stroke();
+            if(x % 50 === 0) ctx.fillText(x, cx + x*zoom + 2, cy + 12);
         }
         for(let y = -POLE_Y; y <= POLE_Y; y += 10) {
             ctx.beginPath(); ctx.moveTo(cx - WRAP_X*zoom, cy - y*zoom); ctx.lineTo(cx + WRAP_X*zoom, cy - y*zoom); ctx.stroke();
+            if(y % 50 === 0) ctx.fillText(y, cx + 2, cy - y*zoom - 2);
         }
 
         // ZONES
-        ctx.fillStyle = "rgba(0, 150, 255, 0.15)"; ctx.fillRect(cx + COAST_X*zoom, cy - POLE_Y*zoom, (WRAP_X - COAST_X)*zoom, (POLE_Y * 2)*zoom);
-        ctx.fillStyle = "rgba(0, 255, 0, 0.15)"; ctx.fillRect(cx - G_LIMIT*zoom, cy - WALL_Y*zoom, (G_LIMIT*2)*zoom, (WALL_Y - CAPITAL_Y)*zoom);
+        ctx.fillStyle = "rgba(0, 255, 0, 0.1)"; ctx.fillRect(cx - G_LIMIT*zoom, cy - WALL_Y*zoom, (G_LIMIT*2)*zoom, (WALL_Y - CAPITAL_Y)*zoom);
 
-        // TITANS
+        // LANDMARKS
+        features.forEach(f => {
+            ctx.strokeStyle = f.c; ctx.fillStyle = f.c;
+            if(f.type === "line") {
+                ctx.beginPath(); ctx.moveTo(cx - WRAP_X*zoom, cy - f.y*zoom); ctx.lineTo(cx + WRAP_X*zoom, cy - f.y*zoom); ctx.stroke();
+                ctx.fillText(f.name, cx - WRAP_X*zoom + 10, cy - f.y*zoom - 5);
+            } else {
+                ctx.beginPath(); ctx.arc(cx + f.x*zoom, cy - f.y*zoom, 4, 0, 7); ctx.fill();
+                ctx.fillText(f.name, cx + f.x*zoom + 8, cy - f.y*zoom + 4);
+            }
+        });
+
+        // TITANS & HUD
         for(let k in state.titans) {
             let t = state.titans[k];
             ctx.strokeStyle = t.c; ctx.lineWidth = 2; ctx.beginPath();
             t.path.forEach((p, i) => { if(i===0) ctx.moveTo(cx+p.x*zoom, cy-p.y*zoom); else ctx.lineTo(cx+p.x*zoom, cy-p.y*zoom); }); ctx.stroke();
-            ctx.fillStyle = t.c; ctx.beginPath(); ctx.arc(cx+t.x*zoom, cy-t.y*zoom, 6, 0, 7); ctx.fill();
-            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial"; ctx.fillText(`${k}`, cx+t.x*zoom+10, cy-t.y*zoom-5);
+            ctx.fillStyle = t.c; ctx.beginPath(); ctx.arc(cx+t.x*zoom, cy-t.y*zoom, 7, 0, 7); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial";
+            ctx.fillText(`${k} (${t.x.toFixed(1)}, ${t.y.toFixed(1)})`, cx+t.x*zoom+10, cy-t.y*zoom-5);
+            ctx.fillStyle = "#aaa"; ctx.fillText(`${t.moved.toFixed(0)}/400 DT`, cx+t.x*zoom+10, cy-t.y*zoom+8);
         }
-
-        // COORDINATE LABELS (FIXED TO GRID POSITIONS)
-        ctx.fillStyle = "#0f0"; ctx.font = "bold 12px Courier New";
-        for(let x = -WRAP_X; x <= WRAP_X; x += 50) {
-            ctx.fillText(x, cx + x*zoom - 10, cy + (POLE_Y*zoom) + 15);
-            ctx.fillText(x, cx + x*zoom - 10, cy - (POLE_Y*zoom) - 5);
-        }
-        for(let y = -POLE_Y; y <= POLE_Y; y += 50) {
-            ctx.fillText(y, cx - (WRAP_X*zoom) - 35, cy - y*zoom + 5);
-            ctx.fillText(y, cx + (WRAP_X*zoom) + 5, cy - y*zoom + 5);
-        }
-
-        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.strokeRect(cx - WRAP_X*zoom, cy - POLE_Y*zoom, (WRAP_X*2)*zoom, (POLE_Y*2)*zoom);
+        ctx.strokeStyle = "#fff"; ctx.strokeRect(cx - WRAP_X*zoom, cy - POLE_Y*zoom, (WRAP_X*2)*zoom, (POLE_Y*2)*zoom);
     }
 
     function applyMove() {
-        const name = document.getElementById('tName').value;
-        const t = state.titans[name]; if (!t || state.day > MAX_DAYS) return;
+        const name = document.getElementById('tName').value; const t = state.titans[name];
+        if (!t || state.day > MAX_DAYS) return;
         state.history.push(JSON.parse(JSON.stringify(state)));
         const r = parseInt(document.getElementById('mRoll').value) || 0;
         const d8 = parseInt(document.getElementById('mDir').value) || 1;
@@ -127,16 +136,20 @@
         let ang = (90 - ((d8 - 1) * 45) - off) * (Math.PI / 180);
         let nx = t.x + (Math.cos(ang) * dist), ny = t.y + (Math.sin(ang) * dist);
 
+        // THE STEEL WALL LOGIC
+        if (name !== "Air") {
+            if (ny >= CAPITAL_Y && ny <= WALL_Y && Math.abs(nx) < G_LIMIT) {
+                nx = nx >= 0 ? G_LIMIT : -G_LIMIT;
+            }
+        }
         if (ny > WALL_Y) ny = (name === "Earth") ? WALL_Y : WALL_Y - (ny - WALL_Y);
         if (nx > WRAP_X) nx -= (WRAP_X*2); if (nx < -WRAP_X) nx += (WRAP_X*2);
-        if (name !== "Air" && ny >= CAPITAL_Y && ny <= WALL_Y && Math.abs(nx) < G_LIMIT) nx = nx > 0 ? G_LIMIT : -G_LIMIT;
         
         t.x = nx; t.y = ny; t.moved += dist; t.path.push({x:nx, y:ny});
         state.movedToday.push(name); updateDropdown(); draw();
     }
 
-    // CONTROLS (PC & TABLET)
-    container.addEventListener('wheel', e => { zoom = Math.max(1, Math.min(50, zoom * (e.deltaY > 0 ? 0.9 : 1.1))); draw(); }, {passive:false});
+    // TABLET PINCH + DRAG
     container.addEventListener('touchstart', e => {
         if (e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
         else { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
@@ -151,6 +164,7 @@
         }
     }, {passive:false});
     container.addEventListener('touchend', () => { isDragging = false; initialDist = null; });
+    container.addEventListener('wheel', e => { zoom = Math.max(1, Math.min(50, zoom * (e.deltaY > 0 ? 0.9 : 1.1))); draw(); }, {passive:false});
     container.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
     window.addEventListener('mousemove', e => { if (isDragging) { offsetX += e.clientX - lastX; offsetY += e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; draw(); } });
     window.addEventListener('mouseup', () => isDragging = false);

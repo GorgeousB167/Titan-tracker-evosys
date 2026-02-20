@@ -2,21 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Campaign Master Hub</title>
     <style>
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #0f1113;
+            font-family: 'Courier New', monospace;
+            background-color: #000;
             color: #fff;
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Doctrine Header */
+        #ui-top {
+            background: #111;
+            border-bottom: 1px solid #333;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .stat-box {
+            border: 1px solid #333;
+            padding: 6px;
+            background: #000;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+
+        /* Main Content */
+        .hub-container {
+            flex-grow: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
         }
-        h1 { color: #00e676; letter-spacing: 2px; margin-bottom: 30px; }
+
+        h1 { 
+            color: #00e676; 
+            letter-spacing: 4px; 
+            margin-bottom: 30px; 
+            font-size: 1.8rem;
+            text-shadow: 0 0 10px rgba(0, 230, 118, 0.5);
+        }
+
         .nav-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -24,34 +62,50 @@
             width: 90%;
             max-width: 400px;
         }
+
         .nav-button {
-            padding: 30px;
+            padding: 35px;
             font-size: 1.5rem;
             font-weight: bold;
             text-align: center;
             text-decoration: none;
             color: #000;
             background: #fff;
-            border-radius: 15px;
+            border-radius: 12px;
             transition: transform 0.2s, background 0.2s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            border: 2px solid #333;
         }
+
         .nav-button:active { transform: scale(0.95); }
-        .btn-titan { background: #0dcaf0; } /* Cyan for Automata/Tech */
-        .btn-encounter { background: #ffc107; } /* Gold for Folk/Creatures */
+        .btn-titan { background: #0dcaf0; border-color: #0097b2; } /* Cyan for Tech */
+        .btn-encounter { background: #ffc107; border-color: #c79400; } /* Gold for Folk */
+        
+        #footer-version {
+            padding: 10px;
+            font-size: 10px;
+            color: #444;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 
-    <h1>COMMAND HUB</h1>
-
-    <div class="nav-grid">
-        <a href="index.html" class="nav-button btn-titan">TITAN TRACKER</a>
-        
-        <a href="index-encounters.html" class="nav-button btn-titan">ENCOUNTER ROLLER</a>
+    <div id="ui-top">
+        <div class="stat-box" style="color: #0f0;">SECTOR: GENESIS</div>
+        <div class="stat-box" style="color: #0af;">G-ZONE: ±1.75</div>
     </div>
 
+    <div class="hub-container">
+        <h1>COMMAND HUB</h1>
+
+        <div class="nav-grid">
+            <a href="index.html" class="nav-button btn-titan">TITAN TRACKER</a>
+            <a href="index-encounters.html" class="nav-button btn-encounter">ENCOUNTER ROLLER</a>
+        </div>
+    </div>
+
+    <div id="footer-version">v1.1 DOCTRINE HUB</div>
+
 </body>
-
 </html>
-

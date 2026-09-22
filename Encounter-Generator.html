@@ -1,0 +1,558 @@
+HTML
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daggerheart Encounter Generator</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --panel-bg: #1a1a1e;
+            --border-color: #2e2e38;
+            --text-primary: #f4f4f6;
+            --text-secondary: #a1a1aa;
+            --accent: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        header p {
+            color: var(--text-secondary);
+        }
+
+        .card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        select, input, textarea {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .checkbox-label input {
+            cursor: pointer;
+            width: 1.1rem;
+            height: 1.1rem;
+            accent-color: var(--accent);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            margin-top: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border-color);
+        }
+
+        .file-status {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .file-status.success {
+            color: var(--success);
+        }
+
+        .file-status.error {
+            color: var(--danger);
+        }
+
+        /* Encounter Output Styling */
+        .encounter-result {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .encounter-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            background-color: var(--bg-color);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .meta-item span:last-child {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .adversary-card {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .adversary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .adversary-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .adversary-tier {
+            font-size: 0.85rem;
+            background: var(--panel-bg);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .adversary-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .adversary-features {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.02);
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .placeholder-text {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 2rem;
+            font-style: italic;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Daggerheart Encounter Generator</h1>
+            <p>Compatible with Core Rulebook JSON data structures</p>
+        </header>
+
+        <!-- Configuration & JSON Loader -->
+        <div class="card">
+            <h2>Adversary Database JSON</h2>
+            <div class="form-group">
+                <label for="jsonFileInput">Upload Adversary JSON File</label>
+                <input type="file" id="jsonFileInput" accept=".json">
+                <div id="fileStatus" class="file-status">No database loaded. Default mock catalog active.</div>
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label for="jsonTextarea">Or Paste JSON Data Directly:</label>
+                <textarea id="jsonTextarea" rows="4" placeholder='Paste JSON here or use the file upload above...'></textarea>
+                <button type="button" id="loadJsonBtn" class="btn-secondary">Load Paste Data</button>
+            </div>
+        </div>
+
+        <!-- Generator Controls -->
+        <div class="card">
+            <h2>Encounter Parameters</h2>
+            <form id="encounterForm">
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="environmentSelect">Environment</label>
+                        <select id="environmentSelect">
+                            <option value="any">Any / Wilderness</option>
+                            <option value="dungeon">Dungeon / Ruins</option>
+                            <option value="urban">Urban / City</option>
+                            <option value="wilderness">Forest / Wilds</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="creatureSizeSelect">Size (of creature preference)</label>
+                        <select id="creatureSizeSelect">
+                            <option value="any">Any / Mixed</option>
+                            <option value="Small">Small</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Large">Large</option>
+                            <option value="Massive">Massive</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="groupSizeSelect">Size (of group / Party tier scaling)</label>
+                        <select id="groupSizeSelect">
+                            <option value="Solo">Solo / Minor Group (Low Threat)</option>
+                            <option value="Standard" selected>Standard Encounter (Balanced)</option>
+                            <option value="Horde">Horde / Large Threat</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 1.25rem;">
+                    <label>Enhancements & Modifiers</label>
+                    <div class="checkbox-group" id="enhancementsGroup">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="enhancement" value="elite"> Elite Leader (+1 Tier / Buffed Stats)
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="enhancement" value="minions"> Minion Support Wave
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="enhancement" value="environment_hazard"> Environmental Hazard Active
+                        </label>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <button type="submit">Generate Encounter</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Encounter Output Display -->
+        <div class="card">
+            <h2>Generated Encounter</h2>
+            <div id="encounterOutput">
+                <div class="placeholder-text">Configure parameters above and click "Generate Encounter" to build your encounter.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fallback default mock database matching standard Daggerheart adversary format structure
+        let adversaryDatabase = {
+            "adversaries": [
+                { "name": "Goblin Scrapper", "type": "Minion", "size": "Small", "environment": ["dungeon", "urban"], "tier": 1, "difficulty": 10, "hp": 3, "stress": 2, "features": "Mob Attack: Gain advantage when attacking targets engaged with allies." },
+                { "name": "Goblin Boss", "type": "Leader", "size": "Medium", "environment": ["dungeon", "urban"], "tier": 1, "difficulty": 13, "hp": 8, "stress": 5, "features": "Direct Subordinates: Once per turn, command a nearby minion to attack." },
+                { "name": "Cave Troll", "type": "Solo", "size": "Large", "environment": ["dungeon", "wilderness"], "tier": 1, "difficulty": 15, "hp": 12, "stress": 4, "features": "Regeneration: Clears 2 HP at the start of its turn unless damaged by fire." },
+                { "name": "Forest Stalker", "type": "Skirmisher", "size": "Medium", "environment": ["wilderness"], "tier": 1, "difficulty": 12, "hp": 6, "stress": 3, "features": "Ambush Predator: Deals extra damage on attacks made from hidden positions." },
+                { "name": "Ancient Guardian", "type": "Solo", "size": "Massive", "environment": ["dungeon"], "tier": 2, "difficulty": 18, "hp": 20, "stress": 8, "features": "Immovable Stance: Immune to knockdown effects; massive threshold protection." }
+            ]
+        };
+
+        // File Upload Handling
+        const jsonFileInput = document.getElementById('jsonFileInput');
+        const fileStatus = document.getElementById('fileStatus');
+        const jsonTextarea = document.getElementById('jsonTextarea');
+        const loadJsonBtn = document.getElementById('loadJsonBtn');
+
+        jsonFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (validateAdversarySchema(parsed)) {
+                        adversaryDatabase = parsed;
+                        fileStatus.textContent = `Successfully loaded database: ${file.name} (${parsed.adversaries.length} adversaries)`;
+                        fileStatus.className = 'file-status success';
+                    } else {
+                        fileStatus.textContent = 'Error: JSON must contain an "adversaries" array.';
+                        fileStatus.className = 'file-status error';
+                    }
+                } catch (err) {
+                    fileStatus.textContent = 'Error parsing JSON file: ' + err.message;
+                    fileStatus.className = 'file-status error';
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        loadJsonBtn.addEventListener('click', () => {
+            const text = jsonTextarea.value.trim();
+            if (!text) return;
+            try {
+                const parsed = JSON.parse(text);
+                if (validateAdversarySchema(parsed)) {
+                    adversaryDatabase = parsed;
+                    fileStatus.textContent = `Successfully loaded database from pasted text (${parsed.adversaries.length} adversaries)`;
+                    fileStatus.className = 'file-status success';
+                } else {
+                    fileStatus.textContent = 'Error: JSON must contain an "adversaries" array.';
+                    fileStatus.className = 'file-status error';
+                }
+            } catch (err) {
+                fileStatus.textContent = 'Error parsing JSON text: ' + err.message;
+                fileStatus.className = 'file-status error';
+            }
+        });
+
+        function validateAdversarySchema(data) {
+            return data && Array.isArray(data.adversaries);
+        }
+
+        // Encounter Generation Logic adhering to Core Book rules
+        document.getElementById('encounterForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const environment = document.getElementById('environmentSelect').value;
+            const creatureSize = document.getElementById('creatureSizeSelect').value;
+            const groupSize = document.getElementById('groupSizeSelect').value;
+            
+            const selectedEnhancements = Array.from(
+                document.querySelectorAll('input[name="enhancement"]:checked')
+            ).map(el => el.value);
+
+            generateEncounter(environment, creatureSize, groupSize, selectedEnhancements);
+        });
+
+        function generateEncounter(environment, sizePref, groupSize, enhancements) {
+            const adversariesList = adversaryDatabase.adversaries || [];
+            
+            // Filter by environment if specified
+            let filtered = adversariesList.filter(adv => {
+                if (environment === 'any') return true;
+                if (!adv.environment) return true;
+                return adv.environment.includes(environment);
+            });
+
+            // Filter by size preference if specified
+            if (sizePref !== 'any') {
+                const sizeFiltered = filtered.filter(adv => adv.size === sizePref);
+                if (sizeFiltered.length > 0) {
+                    filtered = sizeFiltered;
+                }
+            }
+
+            // Fallback if filters are too restrictive
+            if (filtered.length === 0) {
+                filtered = adversariesList;
+            }
+
+            // Determine composition count based on group size
+            let roster = [];
+            if (groupSize === 'Solo') {
+                const soloChoices = filtered.filter(a => a.type === 'Solo' || a.type === 'Leader') ;
+                const pick = soloChoices.length > 0 ? getRandomItem(soloChoices) : getRandomItem(filtered);
+                roster.push(pick);
+            } else if (groupSize === 'Standard') {
+                // Leader or heavy + standard/minions
+                const leaders = filtered.filter(a => a.type === 'Leader' || a.type === 'Solo');
+                if (leaders.length > 0 && Math.random() > 0.3) {
+                    roster.push(getRandomItem(leaders));
+                }
+                const regulars = filtered.filter(a => a.type !== 'Solo');
+                const count = Math.floor(Math.random() * 2) + 2; // 2-3 regulars
+                for (let i = 0; i < count; i++) {
+                    roster.push(getRandomItem(regulars.length ? regulars : filtered));
+                }
+            } else if (groupSize === 'Horde') {
+                const minions = filtered.filter(a => a.type === 'Minion' || a.size === 'Small');
+                const count = Math.floor(Math.random() * 3) + 4; // 4-6 units
+                for (let i = 0; i < count; i++) {
+                    roster.push(getRandomItem(minions.length ? minions : filtered));
+                }
+            }
+
+            // Apply Enhancements
+            let appliedModifiers = [];
+            if (enhancements.includes('elite')) {
+                appliedModifiers.push("Elite Enhancement: Primary adversary gains +2 Difficulty and +50% HP.");
+                if (roster.length > 0) {
+                    roster[0] = { ...roster[0], name: "Elite " + roster[0].name, difficulty: roster[0].difficulty + 2, hp: Math.round(roster[0].hp * 1.5) };
+                }
+            }
+            if (enhancements.includes('minions')) {
+                appliedModifiers.push("Minion Support: A secondary wave of 3 Minions joins mid-combat.");
+            }
+            if (enhancements.includes('environment_hazard')) {
+                appliedModifiers.push("Environmental Hazard Active: Dynamic terrain features or hazards require reaction checks on Fear spends.");
+            }
+
+            renderEncounterOutput(roster, groupSize, environment, appliedModifiers);
+        }
+
+        function getRandomItem(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function renderEncounterOutput(roster, groupSize, environment, modifiers) {
+            const output = document.getElementById('encounterOutput');
+            
+            if (roster.length === 0) {
+                html = `<div class="placeholder-text">No adversaries found matching criteria. Try adjusting filters or reloading JSON.</div>`;
+                output.innerHTML = html;
+                return;
+            }
+
+            let html = `<div class="encounter-result">`;
+            
+            // Meta info summary
+            html += `<div class="encounter-meta">
+                <div class="meta-item"><span>Encounter Scale</span><span>${groupSize}</span></div>
+                <div class="meta-item"><span>Environment</span><span>${environment.toUpperCase()}</span></div>
+                <div class="meta-item"><span>Total Units</span><span>${roster.length} Adversaries</span></div>
+            </div>`;
+
+            if (modifiers.length > 0) {
+                html += `<div style="background: rgba(139, 92, 246, 0.1); border: 1px solid var(--accent); padding: 0.75rem; border-radius: 8px; font-size: 0.9rem;">
+                    <strong>Enhancements Applied:</strong>
+                    <ul style="margin-left: 1.25rem; margin-top: 0.25rem;">
+                        ${modifiers.map(m => `<li>${m}</li>`).join('')}
+                    </ul>
+                </div>`;
+            }
+
+            html += `<div style="display: flex; flex-direction: column; gap: 1rem;">`;
+            roster.forEach(adv => {
+                html += `
+                    <div class="adversary-card">
+                        <div class="adversary-header">
+                            <span class="adversary-name">${adv.name}</span>
+                            <span class="adversary-tier">Tier ${adv.tier || 1} • ${adv.type || 'Standard'} • ${adv.size || 'Medium'}</span>
+                        </div>
+                        <div class="adversary-details">
+                            <div><strong>Difficulty:</strong> ${adv.difficulty || 'N/A'}</div>
+                            <div><strong>HP:</strong> ${adv.hp || 'N/A'}</div>
+                            <div><strong>Stress:</strong> ${adv.stress || 'N/A'}</div>
+                        </div>
+                        ${adv.features ? `<div class="adversary-features"><strong>Features:</strong> ${adv.features}</div>` : ''}
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+
+            output.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
+
+
+Gemini is AI and can make mistakes.

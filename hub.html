@@ -402,40 +402,20 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="creatureSizeSelect">Size (of creature preference)</label>
-                            <select id="creatureSizeSelect">
-                                <option value="any">Any / Mixed</option>
-                                <option value="Small">Small</option>
-                                <option value="Medium">Medium</option>
-                                <option value="Large">Large</option>
-                                <option value="Massive">Massive</option>
-                            </select>
-                        </div>
+        <label for="creatureSizeRoll">Creature Size Roll (e.g., d20 result)</label>
+        <input type="number" id="creatureSizeRoll" placeholder="Enter roll number..." min="1">
+    </div>
 
-                        <div class="form-group">
-                            <label for="groupSizeSelect">Size (of group / Party tier scaling)</label>
-                            <select id="groupSizeSelect">
-                                <option value="Solo">Solo / Minor Group (Low Threat)</option>
-                                <option value="Standard" selected>Standard Encounter (Balanced)</option>
-                                <option value="Horde">Horde / Large Threat</option>
-                            </select>
-                        </div>
-                    </div>
+    <div class="form-group">
+        <label for="groupSizeRoll">Group Size Roll (e.g., d100 result)</label>
+        <input type="number" id="groupSizeRoll" placeholder="Enter roll number..." min="1">
+    </div>
+</div>
 
-                    <div class="form-group" style="margin-top: 1.25rem;">
-                        <label>Enhancements & Modifiers</label>
-                        <div class="checkbox-group" id="enhancementsGroup">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="enhancement" value="elite"> Elite Leader (+1 Tier / Buffed Stats)
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="enhancement" value="minions"> Minion Support Wave
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="enhancement" value="environment_hazard"> Environmental Hazard Active
-                            </label>
-                        </div>
-                    </div>
+<div class="form-group" style="margin-top: 1.25rem;">
+    <label for="enhancementRoll">Enhancements Roll (e.g., d6 result)</label>
+    <input type="number" id="enhancementRoll" placeholder="Enter roll number..." min="1">
+</div>
 
                     <div style="margin-top: 1.5rem;">
                         <button type="submit">Generate Encounter</button>
@@ -581,134 +561,143 @@
         }
 
         // Encounter Generation Logic adhering to Core Book rules
-        document.getElementById('encounterForm').addEventListener('submit', (e) => {
-            e.preventDefault();
+       document.getElementById('encounterForm').addEventListener('submit', (e) => {
+    e.preventDefault();
 
-            const environment = document.getElementById('environmentSelect').value;
-            const creatureSize = document.getElementById('creatureSizeSelect').value;
-            const groupSize = document.getElementById('groupSizeSelect').value;
-            
-            const selectedEnhancements = Array.from(
-                document.querySelectorAll('input[name="enhancement"]:checked')
-            ).map(el => el.value);
+    const environment = document.getElementById('environmentSelect').value;
+    
+    // Retrieve roll inputs
+    const creatureRoll = parseInt(document.getElementById('creatureSizeRoll').value) || 1;
+    const groupRoll = parseInt(document.getElementById('groupSizeRoll').value) || 1;
+    const enhancementRoll = parseInt(document.getElementById('enhancementRoll').value) || 1;
 
-            generateEncounter(environment, creatureSize, groupSize, selectedEnhancements);
-        });
+    // Convert creature size roll using generic thresholds (Modify these ranges as needed for your table)
+    let creatureSize = 'Medium';
+    if (creatureRoll <= 5) creatureSize = 'Small';
+    else if (creatureRoll <= 15) creatureSize = 'Medium';
+    else if (creatureRoll <= 22) creatureSize = 'Large';
+    else creatureSize = 'Massive';
 
-        function generateEncounter(environment, sizePref, groupSize, enhancements) {
-            const adversariesList = adversaryDatabase.adversaries || [];
-            
-            // Filter by environment if specified
-            let filtered = adversariesList.filter(adv => {
-                if (environment === 'any') return true;
-                if (!adv.environment) return true;
-                return adv.environment.includes(environment);
-            });
+    // Convert group size roll using generic thresholds
+    let groupSize = 'Standard';
+    if (groupRoll <= 25) groupSize = 'Solo';
+    else if (groupRoll <= 75) groupSize = 'Standard';
+    else groupSize = 'Horde';
 
-            // Filter by size preference if specified
-            if (sizePref !== 'any') {
-                const sizeFiltered = filtered.filter(adv => adv.size === sizePref);
-                if (sizeFiltered.length > 0) {
-                    filtered = sizeFiltered;
-                }
-            }
+    // Convert enhancements roll using generic thresholds
+    let selectedEnhancements = [];
+    if (enhancementRoll >= 80) selectedEnhancements.push('elite');
+    if (enhancementRoll >= 50 && enhancementRoll < 80) selectedEnhancements.push('minions');
+    if (enhancementRoll % 2 === 0 && enhancementRoll < 50) selectedEnhancements.push('environment_hazard');
 
-            // Fallback if filters are too restrictive
-            if (filtered.length === 0) {
-                filtered = adversariesList;
-            }
+    generateEncounterFromRolls(environment, creatureSize, groupSize, selectedEnhancements, { creatureRoll, groupRoll, enhancementRoll });
+});
 
-            // Determine composition count based on group size
-            let roster = [];
-            if (groupSize === 'Solo') {
-                const soloChoices = filtered.filter(a => a.type === 'Solo' || a.type === 'Leader');
-                const pick = soloChoices.length > 0 ? getRandomItem(soloChoices) : getRandomItem(filtered);
-                roster.push(pick);
-            } else if (groupSize === 'Standard') {
-                const leaders = filtered.filter(a => a.type === 'Leader' || a.type === 'Solo');
-                if (leaders.length > 0 && Math.random() > 0.3) {
-                    roster.push(getRandomItem(leaders));
-                }
-                const regulars = filtered.filter(a => a.type !== 'Solo');
-                const count = Math.floor(Math.random() * 2) + 2; // 2-3 regulars
-                for (let i = 0; i < count; i++) {
-                    roster.push(getRandomItem(regulars.length ? regulars : filtered));
-                }
-            } else if (groupSize === 'Horde') {
-                const minions = filtered.filter(a => a.type === 'Minion' || a.size === 'Small');
-                const count = Math.floor(Math.random() * 3) + 4; // 4-6 units
-                for (let i = 0; i < count; i++) {
-                    roster.push(getRandomItem(minions.length ? minions : filtered));
-                }
-            }
+function generateEncounterFromRolls(environment, sizePref, groupSize, enhancements, rolls) {
+    const adversariesList = adversaryDatabase.adversaries || [];
+    
+    let filtered = adversariesList.filter(adv => {
+        if (environment === 'any') return true;
+        if (!adv.environment) return true;
+        return adv.environment.includes(environment);
+    });
 
-            // Apply Enhancements
-            let appliedModifiers = [];
-            if (enhancements.includes('elite')) {
-                appliedModifiers.push("Elite Enhancement: Primary adversary gains +2 Difficulty and +50% HP.");
-                if (roster.length > 0) {
-                    roster[0] = { ...roster[0], name: "Elite " + roster[0].name, difficulty: roster[0].difficulty + 2, hp: Math.round(roster[0].hp * 1.5) };
-                }
-            }
-            if (enhancements.includes('minions')) {
-                appliedModifiers.push("Minion Support: A secondary wave of 3 Minions joins mid-combat.");
-            }
-            if (enhancements.includes('environment_hazard')) {
-                appliedModifiers.push("Environmental Hazard Active: Dynamic terrain features or hazards require reaction checks on Fear spends.");
-            }
-
-            renderEncounterOutput(roster, groupSize, environment, appliedModifiers);
+    if (sizePref !== 'any') {
+        const sizeFiltered = filtered.filter(adv => adv.size === sizePref);
+        if (sizeFiltered.length > 0) {
+            filtered = sizeFiltered;
         }
+    }
 
-        function getRandomItem(arr) {
-            return arr[Math.floor(Math.random() * arr.length)];
+    if (filtered.length === 0) {
+        filtered = adversariesList;
+    }
+
+    let roster = [];
+    if (groupSize === 'Solo') {
+        const soloChoices = filtered.filter(a => a.type === 'Solo' || a.type === 'Leader');
+        roster.push(soloChoices.length > 0 ? getRandomItem(soloChoices) : getRandomItem(filtered));
+    } else if (groupSize === 'Standard') {
+        const leaders = filtered.filter(a => a.type === 'Leader' || a.type === 'Solo');
+        if (leaders.length > 0 && Math.random() > 0.3) {
+            roster.push(getRandomItem(leaders));
         }
+        const regulars = filtered.filter(a => a.type !== 'Solo');
+        const count = Math.floor(Math.random() * 2) + 2;
+        for (let i = 0; i < count; i++) {
+            roster.push(getRandomItem(regulars.length ? regulars : filtered));
+        }
+    } else if (groupSize === 'Horde') {
+        const minions = filtered.filter(a => a.type === 'Minion' || a.size === 'Small');
+        const count = Math.floor(Math.random() * 3) + 4;
+        for (let i = 0; i < count; i++) {
+            roster.push(getRandomItem(minions.length ? minions : filtered));
+        }
+    }
 
-        function renderEncounterOutput(roster, groupSize, environment, modifiers) {
-            const output = document.getElementById('encounterOutput');
-            
-            if (roster.length === 0) {
-                output.innerHTML = `<div class="placeholder-text">No adversaries found matching criteria. Try adjusting filters or reloading JSON.</div>`;
-                return;
-            }
+    let appliedModifiers = [];
+    if (enhancements.includes('elite')) {
+        appliedModifiers.push(`Elite Enhancement (Roll: ${rolls.enhancementRoll}): Primary adversary gains +2 Difficulty and +50% HP.`);
+        if (roster.length > 0) {
+            roster[0] = { ...roster[0], name: "Elite " + roster[0].name, difficulty: roster[0].difficulty + 2, hp: Math.round(roster[0].hp * 1.5) };
+        }
+    }
+    if (enhancements.includes('minions')) {
+        appliedModifiers.push(`Minion Support (Roll: ${rolls.enhancementRoll}): A secondary wave of 3 Minions joins mid-combat.`);
+    }
+    if (enhancements.includes('environment_hazard')) {
+        appliedModifiers.push(`Environmental Hazard (Roll: ${rolls.enhancementRoll}): Dynamic terrain features or hazards active.`);
+    }
 
-            let html = `<div class="encounter-result">`;
-            
-            html += `<div class="encounter-meta">
-                <div class="meta-item"><span>Encounter Scale</span><span>${groupSize}</span></div>
-                <div class="meta-item"><span>Environment</span><span>${environment.toUpperCase()}</span></div>
-                <div class="meta-item"><span>Total Units</span><span>${roster.length} Adversaries</span></div>
-            </div>`;
+    renderEncounterOutput(roster, `${groupSize} (Rolled: ${rolls.groupRoll})`, environment, appliedModifiers, `Creature Size Roll: ${rolls.creatureRoll} → ${sizePref}`);
+}
 
-            if (modifiers.length > 0) {
-                html += `<div style="background: rgba(139, 92, 246, 0.1); border: 1px solid var(--accent); padding: 0.75rem; border-radius: 8px; font-size: 0.9rem;">
-                    <strong>Enhancements Applied:</strong>
-                    <ul style="margin-left: 1.25rem; margin-top: 0.25rem;">
-                        ${modifiers.map(m => `<li>${m}</li>`).join('')}
-                    </ul>
-                </div>`;
-            }
+// Updated render function wrapper to show roll details clearly
+function renderEncounterOutput(roster, groupSizeText, environment, modifiers, rollSummary) {
+    const output = document.getElementById('encounterOutput');
+    
+    if (roster.length === 0) {
+        output.innerHTML = `<div class="placeholder-text">No adversaries found matching criteria. Try adjusting filters or reloading JSON.</div>`;
+        return;
+    }
 
-            html += `<div style="display: flex; flex-direction: column; gap: 1rem;">`;
-            roster.forEach(adv => {
-                html += `
-                    <div class="adversary-card">
-                        <div class="adversary-header">
-                            <span class="adversary-name">${adv.name}</span>
-                            <span class="adversary-tier">Tier ${adv.tier || 1} • ${adv.type || 'Standard'} • ${adv.size || 'Medium'}</span>
-                        </div>
-                        <div class="adversary-details">
-                            <div><strong>Difficulty:</strong> ${adv.difficulty || 'N/A'}</div>
-                            <div><strong>HP:</strong> ${adv.hp || 'N/A'}</div>
-                            <div><strong>Stress:</strong> ${adv.stress || 'N/A'}</div>
-                        </div>
-                        ${adv.features ? `<div class="adversary-features"><strong>Features:</strong> ${adv.features}</div>` : ''}
-                    </div>
-                `;
-            });
-            html += `</div></div>`;
+    let html = `<div class="encounter-result">`;
+    
+    html += `<div class="encounter-meta">
+        <div class="meta-item"><span>Encounter Scale</span><span>${groupSizeText}</span></div>
+        <div class="meta-item"><span>Environment</span><span>${environment.toUpperCase()}</span></div>
+        <div class="meta-item"><span>Parameters Resolved</span><span>${rollSummary}</span></div>
+    </div>`;
 
-            output.innerHTML = html;
+    if (modifiers.length > 0) {
+        html += `<div style="background: rgba(139, 92, 246, 0.1); border: 1px solid var(--accent); padding: 0.75rem; border-radius: 8px; font-size: 0.9rem;">
+            <strong>Roll Enhancements Applied:</strong>
+            <ul style="margin-left: 1.25rem; margin-top: 0.25rem;">
+                ${modifiers.map(m => `<li>${m}</li>`).join('')}
+            </ul>
+        </div>`;
+    }
+
+    html += `<div style="display: flex; flex-direction: column; gap: 1rem;">`;
+    roster.forEach(adv => {
+        html += `
+            <div class="adversary-card">
+                <div class="adversary-header">
+                    <span class="adversary-name">${adv.name}</span>
+                    <span class="adversary-tier">Tier ${adv.tier || 1} • ${adv.type || 'Standard'} • ${adv.size || 'Medium'}</span>
+                </div>
+                <div class="adversary-details">
+                    <div><strong>Difficulty:</strong> ${adv.difficulty || 'N/A'}</div>
+                    <div><strong>HP:</strong> ${adv.hp || 'N/A'}</div>
+                    <div><strong>Stress:</strong> ${adv.stress || 'N/A'}</div>
+                </div>
+                ${adv.features ? `<div class="adversary-features"><strong>Features:</strong> ${adv.features}</div>` : ''}
+            </div>
+        `;
+    });
+    html += `</div></div>`;
+
+    output.innerHTML = html;
         }
     </script>
 </body>

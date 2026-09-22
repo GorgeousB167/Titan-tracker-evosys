@@ -2,160 +2,705 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <meta name="theme-color" content="#0b0c0d">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="data:application/json,{'name':'CampaignHub','short_name':'Hub','display':'standalone','start_url':'.','background_color':'#0b0c0d','theme_color':'#0b0c0d'}">
-
-    <title>Campaign Master Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daggerheart Campaign Hub</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Overpass:wght@400;800&family=Overpass+Mono:wght@700&display=swap');
         :root {
-            --bg: #0b0c0d;
-            --card: #1a1c20;
-            --accent: #00e676;
-            --text: #ffffff;
-            --titan-btn: #0dcaf0;
-            --encounter-btn: #ffc107;
+            --bg-color: #121214;
+            --panel-bg: #1a1a1e;
+            --border-color: #2e2e38;
+            --text-primary: #f4f4f6;
+            --text-secondary: #a1a1aa;
+            --accent: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
-    /* Use the standard Overpass for the general UI */
-    font-family: 'Overpass', sans-serif; 
-    background-color: var(--bg);
-    color: var(--text);
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100dvh;
-    overflow: hidden;
-}
-
-        /* Doctrine Header */
-        #ui-top {
-            background: #111;
-            border-bottom: 1px solid #333;
-            padding: 12px 15px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            z-index: 10;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem 1rem;
         }
 
-.stat-box {
-    /* Use Overpass Mono for the Sector/G-Zone stats to make them look like data */
-    font-family: 'Overpass Mono', monospace;
-    border: 1px solid #333;
-    padding: 8px;
-    background: #000;
-    text-align: center;
-    font-weight: bold;
-    font-size: 11px;
-    letter-spacing: 1.5px;
-    border-radius: 4px;
-    text-transform: uppercase;
-}
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
 
-        /* Main Content */
-        .hub-container {
-            flex-grow: 1;
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        header p {
+            color: var(--text-secondary);
+        }
+
+        .card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .form-group {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            gap: 0.5rem;
         }
 
-        .card-panel {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 30px 20px;
-            width: 100%;
-            max-width: 400px;
-            border: 1px solid #333;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-            text-align: center;
+        label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
         }
 
-        h2 { 
-            color: var(--accent); 
-            font-size: 0.8rem; 
-            text-transform: uppercase; 
-            letter-spacing: 3px; 
-            margin: 0 0 10px 0;
+        select, input, textarea {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
         }
 
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            margin: 0 0 30px 0;
-            text-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--accent);
         }
 
-        .nav-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 0.5rem;
         }
 
-        .nav-button {
-            font-family: 'Overpass', sans-serif;
-            padding: 25px;
-            font-size: 1.1rem;
-            font-weight: 800;
-            text-align: center;
-            text-decoration: none;
-            color: #000;
-            border-radius: 10px;
-            transition: 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border: none;
+        .checkbox-label {
             display: flex;
             align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            gap: 0.5rem;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 0.95rem;
         }
 
-        .nav-button:active { transform: scale(0.96); opacity: 0.9; }
+        .checkbox-label input {
+            cursor: pointer;
+            width: 1.1rem;
+            height: 1.1rem;
+            accent-color: var(--accent);
+        }
 
-        .btn-titan { background: var(--titan-btn); }
-        .btn-encounter { background: var(--encounter-btn); }
-        
-        #footer-version {
-            padding: 15px;
-            font-size: 10px;
-            color: #555;
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            margin-top: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border-color);
+        }
+
+        .file-status {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .file-status.success {
+            color: var(--success);
+        }
+
+        .file-status.error {
+            color: var(--danger);
+        }
+
+        /* Navigation & Hub Views */
+        .hub-nav {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .hub-btn {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 1;
+            min-width: 140px;
             text-align: center;
-            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+
+        .hub-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+
+        .hub-btn.active {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .tool-tile {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+
+        .tool-tile:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .tool-tile h3 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+
+        .tool-tile p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Encounter Output Styling */
+        .encounter-result {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .encounter-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            background-color: var(--bg-color);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .meta-item span:last-child {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .adversary-card {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .adversary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .adversary-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .adversary-tier {
+            font-size: 0.85rem;
+            background: var(--panel-bg);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .adversary-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .adversary-features {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.02);
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .placeholder-text {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 2rem;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
 
-    <div id="ui-top">
-        <div class="stat-box" style="color: #00e676; border-color: rgba(0,230,118,0.3);">SECTOR: GENESIS</div>
-        <div class="stat-box" style="color: #0dcaf0; border-color: rgba(13,202,240,0.3);">G-ZONE: ±1.75</div>
-    </div>
+    <div class="container">
+        <header>
+            <h1>Daggerheart Campaign Hub</h1>
+            <p>GM Suite & Core Rulebook Companion Tools</p>
+        </header>
 
-    <div class="hub-container">
-        <div class="card-panel">
-            <h2>Doctrine Interface</h2>
-            <h1>COMMAND HUB</h1>
+        <!-- Hub Navigation Bar -->
+        <nav class="hub-nav">
+            <button type="button" class="hub-btn active" data-target="view-dashboard">Dashboard Hub</button>
+            <button type="button" class="hub-btn" data-target="view-encounter">Encounter Generator</button>
+            <button type="button" class="hub-btn" data-target="view-database">Adversary Database</button>
+            <button type="button" class="hub-btn" data-target="view-tools2">Future Tool 1</button>
+            <button type="button" class="hub-btn" data-target="view-tools3">Future Tool 2</button>
+        </nav>
 
-            <div class="nav-grid">
-                <a href="index.html" class="nav-button btn-titan">Titan Tracker</a>
-                <a href="index-encounters.html" class="nav-button btn-encounter">Encounter Roller</a>
+        <!-- VIEW: DASHBOARD / HOME -->
+        <section id="view-dashboard" class="view-section active">
+            <div class="card">
+                <h2>Welcome, Game Master</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.5;">
+                    Select a tool below or use the top navigation bar to access your campaign modules. All utilities integrate directly with core rulebook data structures and custom JSON configurations.
+                </p>
+                <div class="tool-grid">
+                    <div class="tool-tile" onclick="switchView('view-encounter')">
+                        <h3>Encounter Generator</h3>
+                        <p>Build balanced encounters using environment filters, creature sizes, group scaling, and core enhancements.</p>
+                    </div>
+                    <div class="tool-tile" onclick="switchView('view-database')">
+                        <h3>Adversary Database</h3>
+                        <p>Upload, manage, and inspect your custom JSON adversary catalogs and rules.</p>
+                    </div>
+                    <div class="tool-tile" onclick="switchView('view-tools2')">
+                        <h3>Future Tool 1 (Placeholder)</h3>
+                        <p>Reserved space for upcoming campaign utilities (e.g., Session Tracker, Loot Tables, or Initiative).</p>
+                    </div>
+                    <div class="tool-tile" onclick="switchView('view-tools3')">
+                        <h3>Future Tool 2 (Placeholder)</h3>
+                        <p>Reserved space for additional rules modules or custom generators.</p>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
+
+        <!-- VIEW: ENCOUNTER GENERATOR -->
+        <section id="view-encounter" class="view-section">
+            <div class="card">
+                <h2>Encounter Parameters</h2>
+                <form id="encounterForm">
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="environmentSelect">Environment</label>
+                            <select id="environmentSelect">
+                                <option value="any">Any / Wilderness</option>
+                                <option value="dungeon">Dungeon / Ruins</option>
+                                <option value="urban">Urban / City</option>
+                                <option value="wilderness">Forest / Wilds</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="creatureSizeSelect">Size (of creature preference)</label>
+                            <select id="creatureSizeSelect">
+                                <option value="any">Any / Mixed</option>
+                                <option value="Small">Small</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Large">Large</option>
+                                <option value="Massive">Massive</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="groupSizeSelect">Size (of group / Party tier scaling)</label>
+                            <select id="groupSizeSelect">
+                                <option value="Solo">Solo / Minor Group (Low Threat)</option>
+                                <option value="Standard" selected>Standard Encounter (Balanced)</option>
+                                <option value="Horde">Horde / Large Threat</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 1.25rem;">
+                        <label>Enhancements & Modifiers</label>
+                        <div class="checkbox-group" id="enhancementsGroup">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="enhancement" value="elite"> Elite Leader (+1 Tier / Buffed Stats)
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="enhancement" value="minions"> Minion Support Wave
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="enhancement" value="environment_hazard"> Environmental Hazard Active
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem;">
+                        <button type="submit">Generate Encounter</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Generated Encounter</h2>
+                <div id="encounterOutput">
+                    <div class="placeholder-text">Configure parameters above and click "Generate Encounter" to build your encounter.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: ADVERSARY DATABASE MANAGER -->
+        <section id="view-database" class="view-section">
+            <div class="card">
+                <h2>Adversary Database JSON</h2>
+                <div class="form-group">
+                    <label for="jsonFileInput">Upload Adversary JSON File</label>
+                    <input type="file" id="jsonFileInput" accept=".json">
+                    <div id="fileStatus" class="file-status">No database loaded. Default mock catalog active.</div>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="jsonTextarea">Or Paste JSON Data Directly:</label>
+                    <textarea id="jsonTextarea" rows="6" placeholder='Paste JSON here or use the file upload above...'></textarea>
+                    <button type="button" id="loadJsonBtn" class="btn-secondary">Load Paste Data</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: FUTURE TOOL 1 -->
+        <section id="view-tools2" class="view-section">
+            <div class="card">
+                <h2>Future Tool 1</h2>
+                <div class="placeholder-text">This section is ready for your next custom tool module.</div>
+            </div>
+        </section>
+
+        <!-- VIEW: FUTURE TOOL 2 -->
+        <section id="view-tools3" class="view-section">
+            <div class="card">
+                <h2>Future Tool 2</h2>
+                <div class="placeholder-text">This section is ready for your next custom tool module.</div>
+            </div>
+        </section>
     </div>
 
-    <div id="footer-version">v1.1 DOCTRINE HUB • EST. 2026</div>
+    <script>
+        // Fallback default mock database matching standard Daggerheart adversary format structure
+        let adversaryDatabase = {
+            "adversaries": [
+                { "name": "Goblin Scrapper", "type": "Minion", "size": "Small", "environment": ["dungeon", "urban"], "tier": 1, "difficulty": 10, "hp": 3, "stress": 2, "features": "Mob Attack: Gain advantage when attacking targets engaged with allies." },
+                { "name": "Goblin Boss", "type": "Leader", "size": "Medium", "environment": ["dungeon", "urban"], "tier": 1, "difficulty": 13, "hp": 8, "stress": 5, "features": "Direct Subordinates: Once per turn, command a nearby minion to attack." },
+                { "name": "Cave Troll", "type": "Solo", "size": "Large", "environment": ["dungeon", "wilderness"], "tier": 1, "difficulty": 15, "hp": 12, "stress": 4, "features": "Regeneration: Clears 2 HP at the start of its turn unless damaged by fire." },
+                { "name": "Forest Stalker", "type": "Skirmisher", "size": "Medium", "environment": ["wilderness"], "tier": 1, "difficulty": 12, "hp": 6, "stress": 3, "features": "Ambush Predator: Deals extra damage on attacks made from hidden positions." },
+                { "name": "Ancient Guardian", "type": "Solo", "size": "Massive", "environment": ["dungeon"], "tier": 2, "difficulty": 18, "hp": 20, "stress": 8, "features": "Immovable Stance: Immune to knockdown effects; massive threshold protection." }
+            ]
+        };
 
+        // Hub Navigation Switching
+        const navButtons = document.querySelectorAll('.hub-btn');
+        const viewSections = document.querySelectorAll('.view-section');
+
+        function switchView(targetId) {
+            navButtons.forEach(btn => {
+                if (btn.getAttribute('data-target') === targetId) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            viewSections.forEach(section => {
+                if (section.id === targetId) {
+                    section.classList.add('active');
+                } else {
+                    section.classList.remove('active');
+                }
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-target');
+                switchView(targetId);
+            });
+        });
+
+        // File Upload Handling
+        const jsonFileInput = document.getElementById('jsonFileInput');
+        const fileStatus = document.getElementById('fileStatus');
+        const jsonTextarea = document.getElementById('jsonTextarea');
+        const loadJsonBtn = document.getElementById('loadJsonBtn');
+
+        jsonFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (validateAdversarySchema(parsed)) {
+                        adversaryDatabase = parsed;
+                        fileStatus.textContent = `Successfully loaded database: ${file.name} (${parsed.adversaries.length} adversaries)`;
+                        fileStatus.className = 'file-status success';
+                    } else {
+                        fileStatus.textContent = 'Error: JSON must contain an "adversaries" array.';
+                        fileStatus.className = 'file-status error';
+                    }
+                } catch (err) {
+                    fileStatus.textContent = 'Error parsing JSON file: ' + err.message;
+                    fileStatus.className = 'file-status error';
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        loadJsonBtn.addEventListener('click', () => {
+            const text = jsonTextarea.value.trim();
+            if (!text) return;
+            try {
+                const parsed = JSON.parse(text);
+                if (validateAdversarySchema(parsed)) {
+                    adversaryDatabase = parsed;
+                    fileStatus.textContent = `Successfully loaded database from pasted text (${parsed.adversaries.length} adversaries)`;
+                    fileStatus.className = 'file-status success';
+                } else {
+                    fileStatus.textContent = 'Error: JSON must contain an "adversaries" array.';
+                    fileStatus.className = 'file-status error';
+                }
+            } catch (err) {
+                fileStatus.textContent = 'Error parsing JSON text: ' + err.message;
+                fileStatus.className = 'file-status error';
+            }
+        });
+
+        function validateAdversarySchema(data) {
+            return data && Array.isArray(data.adversaries);
+        }
+
+        // Encounter Generation Logic adhering to Core Book rules
+        document.getElementById('encounterForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const environment = document.getElementById('environmentSelect').value;
+            const creatureSize = document.getElementById('creatureSizeSelect').value;
+            const groupSize = document.getElementById('groupSizeSelect').value;
+            
+            const selectedEnhancements = Array.from(
+                document.querySelectorAll('input[name="enhancement"]:checked')
+            ).map(el => el.value);
+
+            generateEncounter(environment, creatureSize, groupSize, selectedEnhancements);
+        });
+
+        function generateEncounter(environment, sizePref, groupSize, enhancements) {
+            const adversariesList = adversaryDatabase.adversaries || [];
+            
+            // Filter by environment if specified
+            let filtered = adversariesList.filter(adv => {
+                if (environment === 'any') return true;
+                if (!adv.environment) return true;
+                return adv.environment.includes(environment);
+            });
+
+            // Filter by size preference if specified
+            if (sizePref !== 'any') {
+                const sizeFiltered = filtered.filter(adv => adv.size === sizePref);
+                if (sizeFiltered.length > 0) {
+                    filtered = sizeFiltered;
+                }
+            }
+
+            // Fallback if filters are too restrictive
+            if (filtered.length === 0) {
+                filtered = adversariesList;
+            }
+
+            // Determine composition count based on group size
+            let roster = [];
+            if (groupSize === 'Solo') {
+                const soloChoices = filtered.filter(a => a.type === 'Solo' || a.type === 'Leader');
+                const pick = soloChoices.length > 0 ? getRandomItem(soloChoices) : getRandomItem(filtered);
+                roster.push(pick);
+            } else if (groupSize === 'Standard') {
+                const leaders = filtered.filter(a => a.type === 'Leader' || a.type === 'Solo');
+                if (leaders.length > 0 && Math.random() > 0.3) {
+                    roster.push(getRandomItem(leaders));
+                }
+                const regulars = filtered.filter(a => a.type !== 'Solo');
+                const count = Math.floor(Math.random() * 2) + 2; // 2-3 regulars
+                for (let i = 0; i < count; i++) {
+                    roster.push(getRandomItem(regulars.length ? regulars : filtered));
+                }
+            } else if (groupSize === 'Horde') {
+                const minions = filtered.filter(a => a.type === 'Minion' || a.size === 'Small');
+                const count = Math.floor(Math.random() * 3) + 4; // 4-6 units
+                for (let i = 0; i < count; i++) {
+                    roster.push(getRandomItem(minions.length ? minions : filtered));
+                }
+            }
+
+            // Apply Enhancements
+            let appliedModifiers = [];
+            if (enhancements.includes('elite')) {
+                appliedModifiers.push("Elite Enhancement: Primary adversary gains +2 Difficulty and +50% HP.");
+                if (roster.length > 0) {
+                    roster[0] = { ...roster[0], name: "Elite " + roster[0].name, difficulty: roster[0].difficulty + 2, hp: Math.round(roster[0].hp * 1.5) };
+                }
+            }
+            if (enhancements.includes('minions')) {
+                appliedModifiers.push("Minion Support: A secondary wave of 3 Minions joins mid-combat.");
+            }
+            if (enhancements.includes('environment_hazard')) {
+                appliedModifiers.push("Environmental Hazard Active: Dynamic terrain features or hazards require reaction checks on Fear spends.");
+            }
+
+            renderEncounterOutput(roster, groupSize, environment, appliedModifiers);
+        }
+
+        function getRandomItem(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function renderEncounterOutput(roster, groupSize, environment, modifiers) {
+            const output = document.getElementById('encounterOutput');
+            
+            if (roster.length === 0) {
+                output.innerHTML = `<div class="placeholder-text">No adversaries found matching criteria. Try adjusting filters or reloading JSON.</div>`;
+                return;
+            }
+
+            let html = `<div class="encounter-result">`;
+            
+            html += `<div class="encounter-meta">
+                <div class="meta-item"><span>Encounter Scale</span><span>${groupSize}</span></div>
+                <div class="meta-item"><span>Environment</span><span>${environment.toUpperCase()}</span></div>
+                <div class="meta-item"><span>Total Units</span><span>${roster.length} Adversaries</span></div>
+            </div>`;
+
+            if (modifiers.length > 0) {
+                html += `<div style="background: rgba(139, 92, 246, 0.1); border: 1px solid var(--accent); padding: 0.75rem; border-radius: 8px; font-size: 0.9rem;">
+                    <strong>Enhancements Applied:</strong>
+                    <ul style="margin-left: 1.25rem; margin-top: 0.25rem;">
+                        ${modifiers.map(m => `<li>${m}</li>`).join('')}
+                    </ul>
+                </div>`;
+            }
+
+            html += `<div style="display: flex; flex-direction: column; gap: 1rem;">`;
+            roster.forEach(adv => {
+                html += `
+                    <div class="adversary-card">
+                        <div class="adversary-header">
+                            <span class="adversary-name">${adv.name}</span>
+                            <span class="adversary-tier">Tier ${adv.tier || 1} • ${adv.type || 'Standard'} • ${adv.size || 'Medium'}</span>
+                        </div>
+                        <div class="adversary-details">
+                            <div><strong>Difficulty:</strong> ${adv.difficulty || 'N/A'}</div>
+                            <div><strong>HP:</strong> ${adv.hp || 'N/A'}</div>
+                            <div><strong>Stress:</strong> ${adv.stress || 'N/A'}</div>
+                        </div>
+                        ${adv.features ? `<div class="adversary-features"><strong>Features:</strong> ${adv.features}</div>` : ''}
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+
+            output.innerHTML = html;
+        }
+    </script>
 </body>
 </html>
-

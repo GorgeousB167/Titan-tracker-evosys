@@ -70,11 +70,18 @@
             align-items: center;
         }
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
+      .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+/* Optional: Ensures it stacks cleanly on smaller mobile screens */
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
 
         .form-group {
             display: flex;
@@ -596,14 +603,16 @@
 function generateEncounterFromRolls(environment, sizePref, groupSize, enhancements, rolls) {
     const adversariesList = adversaryDatabase.adversaries || [];
     
+    // 1. Reference JSON 'environment' property against selected dropdown
     let filtered = adversariesList.filter(adv => {
         if (environment === 'any') return true;
         if (!adv.environment) return true;
         return adv.environment.includes(environment);
     });
 
+    // 2. Reference JSON 'size' property against the Creature Size Roll result
     if (sizePref !== 'any') {
-        const sizeFiltered = filtered.filter(adv => adv.size === sizePref);
+        const sizeFiltered = filtered.filter(adv => adv.size && adv.size.toLowerCase() === sizePref.toLowerCase());
         if (sizeFiltered.length > 0) {
             filtered = sizeFiltered;
         }
@@ -613,6 +622,7 @@ function generateEncounterFromRolls(environment, sizePref, groupSize, enhancemen
         filtered = adversariesList;
     }
 
+    // 3. Reference JSON 'type' property against the Group Size Roll result (Solo, Regulars, Minions)
     let roster = [];
     if (groupSize === 'Solo') {
         const soloChoices = filtered.filter(a => a.type === 'Solo' || a.type === 'Leader');
@@ -622,7 +632,7 @@ function generateEncounterFromRolls(environment, sizePref, groupSize, enhancemen
         if (leaders.length > 0 && Math.random() > 0.3) {
             roster.push(getRandomItem(leaders));
         }
-        const regulars = filtered.filter(a => a.type !== 'Solo');
+        const regulars = filtered.filter(a => a.type !== 'Solo' && a.type !== 'Minion');
         const count = Math.floor(Math.random() * 2) + 2;
         for (let i = 0; i < count; i++) {
             roster.push(getRandomItem(regulars.length ? regulars : filtered));
@@ -635,6 +645,7 @@ function generateEncounterFromRolls(environment, sizePref, groupSize, enhancemen
         }
     }
 
+    // 4. Apply Enhancements determined by your Enhancements Roll
     let appliedModifiers = [];
     if (enhancements.includes('elite')) {
         appliedModifiers.push(`Elite Enhancement (Roll: ${rolls.enhancementRoll}): Primary adversary gains +2 Difficulty and +50% HP.`);
@@ -643,10 +654,10 @@ function generateEncounterFromRolls(environment, sizePref, groupSize, enhancemen
         }
     }
     if (enhancements.includes('minions')) {
-        appliedModifiers.push(`Minion Support (Roll: ${rolls.enhancementRoll}): A secondary wave of 3 Minions joins mid-combat.`);
+        appliedModifiers.push(`Minion Support (Roll: ${rolls.enhancementRoll}): Secondary wave of Minions joins combat.`);
     }
     if (enhancements.includes('environment_hazard')) {
-        appliedModifiers.push(`Environmental Hazard (Roll: ${rolls.enhancementRoll}): Dynamic terrain features or hazards active.`);
+        appliedModifiers.push(`Environmental Hazard (Roll: ${rolls.enhancementRoll}): Dynamic terrain hazards active.`);
     }
 
     renderEncounterOutput(roster, `${groupSize} (Rolled: ${rolls.groupRoll})`, environment, appliedModifiers, `Creature Size Roll: ${rolls.creatureRoll} → ${sizePref}`);
